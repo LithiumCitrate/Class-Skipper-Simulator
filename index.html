@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逃课模拟器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="game-shell">
+        <section class="hud-panel">
+            <div class="hud-row hud-row-top">
+                <div class="pixel-card brand-card">
+                    <span class="card-kicker">校园逃课模拟器</span>
+                    <strong class="card-title">点名前 10 分钟，想办法只混到刚刚好。</strong>
+                    <p class="brand-copy" id="headlineCopy">今天先别急着冲，看看老师和室友是哪一挂。</p>
+                </div>
+                <div class="status-strip">
+                    <div class="pixel-card stat-card">
+                        <span class="stat-label">第</span>
+                        <strong class="stat-value"><span id="dayCount">0</span> 天</strong>
+                    </div>
+                    <div class="pixel-card stat-card">
+                        <span class="stat-label">当前位置</span>
+                        <strong class="stat-value" id="currentLocation">寝室</strong>
+                    </div>
+                    <div class="pixel-card stat-card">
+                        <span class="stat-label">得分</span>
+                        <strong class="stat-value" id="score">0</strong>
+                    </div>
+                    <div class="pixel-card stat-card danger-card">
+                        <span class="stat-label">失败</span>
+                        <strong class="stat-value"><span id="failCount">0</span> / 3</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-stage pixel-frame">
+                <div class="map-overlay">
+                    <button class="location-marker dormitory" id="dormitoryBtn" type="button">
+                        <span class="marker-name">寝室</span>
+                    </button>
+                    <button class="location-marker wait-marker lakeside" id="lakesideBtn" type="button">
+                        <span class="marker-name">湖边路口</span>
+                    </button>
+                    <button class="location-marker wait-marker eastPath" id="eastPathBtn" type="button">
+                        <span class="marker-name">东侧路口</span>
+                    </button>
+                    <button class="location-marker wait-marker libraryGate" id="libraryGateBtn" type="button">
+                        <span class="marker-name">图书馆</span>
+                    </button>
+                    <button class="location-marker wait-marker route7" id="route7Btn" type="button">
+                        <span class="marker-name">7号楼路口</span>
+                    </button>
+                    <button class="location-marker building7" id="building7Btn" type="button">
+                        <span class="marker-name">7 号教学楼</span>
+                    </button>
+                    <button class="location-marker building3" id="building3Btn" type="button">
+                        <span class="marker-name">3 号教学楼</span>
+                    </button>
+                    <div class="player" id="player" aria-label="玩家位置">
+                        <img src="assets/player-pixel.png" alt="像素人物">
+                    </div>
+                    <div class="building-occluder dormitory-mask" aria-hidden="true"></div>
+                    <div class="building-occluder building7-mask" aria-hidden="true"></div>
+                    <div class="building-occluder building3-mask" aria-hidden="true"></div>
+                </div>
+            </div>
+
+            <div class="hud-row hud-row-bottom">
+                <div class="pixel-card course-panel">
+                    <span class="course-label">今日课程</span>
+                    <strong class="course-name" id="courseNameLarge">等待开始</strong>
+                    <p class="course-meta" id="courseMeta">每天开始上课前有 30 秒准备时间。</p>
+                    <p class="course-countdown" id="courseCountdown">点击开始游戏</p>
+                    <div class="badge-row" id="courseBadgeRow"></div>
+                </div>
+
+                <div class="pixel-card gossip-panel">
+                    <span class="course-label">今日风声</span>
+                    <p class="gossip-line"><strong>老师状态：</strong><span id="teacherMood">未刷新</span></p>
+                    <p class="gossip-line"><strong>室友靠谱度：</strong><span id="roommateMood">未刷新</span></p>
+                    <p class="gossip-line"><strong>校园消息：</strong><span id="campusBuzz">今天还没人放风。</span></p>
+                    <p class="gossip-quote" id="gossipQuote">“这节不点名”通常和“老师马上下课”一样不可信。</p>
+                </div>
+
+                <div class="pixel-card action-panel">
+                    <button id="goClassBtn" class="pixel-button accent" type="button" disabled>立刻赶去上课</button>
+                    <div class="action-row">
+                        <button id="startBtn" class="pixel-button" type="button">开始</button>
+                        <button id="pauseBtn" class="pixel-button" type="button" disabled>暂停</button>
+                        <button id="resetBtn" class="pixel-button ghost" type="button">重开</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="notification" id="notification" role="status" aria-live="polite"></div>
+
+    <section class="game-over-screen" id="gameOverScreen" aria-hidden="true">
+        <div class="game-over-content pixel-card">
+            <span class="card-kicker">本轮结算</span>
+            <h1 id="gameOverTitle">游戏结束</h1>
+            <p id="gameOverMessage">准备再来一轮。</p>
+            <div class="final-stats">
+                <div class="final-stat">
+                    <span>最终得分</span>
+                    <strong id="finalScore">0</strong>
+                </div>
+                <div class="final-stat">
+                    <span>坚持天数</span>
+                    <strong id="finalTime">第 0 天</strong>
+                </div>
+            </div>
+            <button class="pixel-button accent" id="restartBtn" type="button">重新开始</button>
+        </div>
+    </section>
+
+    <script src="game.js"></script>
+</body>
+</html>
