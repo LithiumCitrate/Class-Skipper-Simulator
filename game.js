@@ -275,7 +275,9 @@ const gameState = {
     roommateRolled: false,
     specialEvent: null,
     eventEffects: null,
-    soundEnabled: true,
+    bgmEnabled: true,
+    sfxEnabled: true,
+    isSoundPanelOpen: false,
     audioReady: false,
     floorSearchAttempts: 0,
     wrongFloorCount: 0,
@@ -295,6 +297,9 @@ const elements = {
     resetBtn: document.getElementById("resetBtn"),
     noticeBtn: document.getElementById("noticeBtn"),
     soundBtn: document.getElementById("soundBtn"),
+    soundPanel: document.getElementById("soundPanel"),
+    bgmToggleBtn: document.getElementById("bgmToggleBtn"),
+    sfxToggleBtn: document.getElementById("sfxToggleBtn"),
     goClassBtn: document.getElementById("goClassBtn"),
     dormitoryBtn: document.getElementById("dormitoryBtn"),
     canteenBtn: document.getElementById("canteenBtn"),
@@ -339,6 +344,7 @@ let gameInterval = null;
 let notificationTimeout = null;
 let feedbackTimeout = null;
 let audioContext = null;
+let bgmAudio = null;
 
 function initGame() {
     clearInterval(gameInterval);
@@ -387,7 +393,9 @@ function initGame() {
         roommateRolled: false,
         specialEvent: null,
         eventEffects: createDefaultEventEffects(),
-        soundEnabled: true,
+        bgmEnabled: true,
+        sfxEnabled: true,
+        isSoundPanelOpen: false,
         audioReady: false,
         floorSearchAttempts: 0,
         wrongFloorCount: 0,
@@ -402,11 +410,14 @@ function initGame() {
     elements.pauseBtn.textContent = "暂停";
     elements.goClassBtn.disabled = true;
     elements.soundBtn.textContent = "音效：开";
+    updateSoundControls();
     elements.gameOverScreen.classList.remove("show");
     elements.gameOverScreen.setAttribute("aria-hidden", "true");
     closeBuildingOverlay(false);
     closeNoticeOverlay(false);
     closeAttendanceOverlay(false);
+    stopBgm();
+    updateSoundControls();
     elements.player.classList.remove("moving");
     elements.player.style.setProperty("--player-facing", "1");
     updateUI();
@@ -415,7 +426,9 @@ function initGame() {
 
 function startGame() {
     ensureAudioReady();
+    ensureBgmReady();
     if (gameState.isRunning && !gameState.isPaused) {
+        syncBgmPlayback();
         return;
     }
 
@@ -427,6 +440,7 @@ function startGame() {
     gameState.isPaused = false;
     elements.startBtn.disabled = true;
     elements.pauseBtn.disabled = false;
+    syncBgmPlayback();
     elements.pauseBtn.textContent = "暂停";
 
     clearInterval(gameInterval);
@@ -703,7 +717,7 @@ function updateMarkers() {
 }
 
 function ensureAudioReady() {
-    if (gameState.audioReady || !gameState.soundEnabled) {
+    if (gameState.audioReady || !gameState.sfxEnabled) {
         return;
     }
 
@@ -719,8 +733,77 @@ function ensureAudioReady() {
     gameState.audioReady = true;
 }
 
+function ensureBgmReady() {
+    if (bgmAudio) {
+        return;
+    }
+
+    bgmAudio = new Audio("Tiptoeing.mp3");
+    bgmAudio.loop = true;
+    bgmAudio.preload = "auto";
+    bgmAudio.volume = 0.42;
+}
+
+function syncBgmPlayback() {
+    ensureBgmReady();
+    if (!bgmAudio) {
+        return;
+    }
+
+    if (!gameState.bgmEnabled || !gameState.isRunning || gameState.isPaused) {
+        bgmAudio.pause();
+        return;
+    }
+
+    const playPromise = bgmAudio.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+    }
+}
+
+function stopBgm() {
+    if (!bgmAudio) {
+        return;
+    }
+
+    bgmAudio.pause();
+    bgmAudio.currentTime = 0;
+}
+
+function updateSoundControls() {
+    elements.soundBtn.textContent = gameState.isSoundPanelOpen ? "收起声音设置" : "声音设置";
+    elements.soundPanel.classList.toggle("show", gameState.isSoundPanelOpen);
+    elements.soundPanel.setAttribute("aria-hidden", gameState.isSoundPanelOpen ? "false" : "true");
+    elements.bgmToggleBtn.textContent = gameState.bgmEnabled ? "开" : "关";
+    elements.sfxToggleBtn.textContent = gameState.sfxEnabled ? "开" : "关";
+}
+
+function toggleSoundPanel() {
+    gameState.isSoundPanelOpen = !gameState.isSoundPanelOpen;
+    updateSoundControls();
+}
+
+function toggleBgm() {
+    gameState.bgmEnabled = !gameState.bgmEnabled;
+    if (!gameState.bgmEnabled) {
+        stopBgm();
+    } else {
+        syncBgmPlayback();
+    }
+    updateSoundControls();
+}
+
+function toggleSfx() {
+    gameState.sfxEnabled = !gameState.sfxEnabled;
+    if (gameState.sfxEnabled) {
+        ensureAudioReady();
+        playFeedbackSound("info");
+    }
+    updateSoundControls();
+}
+
 function playFeedbackSound(type) {
-    if (!gameState.soundEnabled) {
+    if (!gameState.sfxEnabled) {
         return;
     }
 
@@ -1540,6 +1623,7 @@ function endGame(completedTenDays) {
     closeBuildingOverlay(false);
     closeNoticeOverlay(false);
     closeAttendanceOverlay(false);
+    stopBgm();
     elements.finalScore.textContent = gameState.score;
     elements.finalTime.textContent = `第 ${gameState.dayCount} 天`;
 
@@ -1629,14 +1713,9 @@ elements.noticeBtn.addEventListener("click", () => {
     gameState.hasSeenNotice = true;
     openNoticeOverlay();
 });
-elements.soundBtn.addEventListener("click", () => {
-    gameState.soundEnabled = !gameState.soundEnabled;
-    elements.soundBtn.textContent = gameState.soundEnabled ? "音效：开" : "音效：关";
-    if (gameState.soundEnabled) {
-        ensureAudioReady();
-        playFeedbackSound("info");
-    }
-});
+elements.soundBtn.addEventListener("click", toggleSoundPanel);
+elements.bgmToggleBtn.addEventListener("click", toggleBgm);
+elements.sfxToggleBtn.addEventListener("click", toggleSfx);
 elements.goClassBtn.addEventListener("click", goToClass);
 elements.dormitoryBtn.addEventListener("click", () => moveToLocation("dormitory"));
 elements.canteenBtn.addEventListener("click", () => moveToLocation("canteen"));

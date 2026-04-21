@@ -351,6 +351,37 @@ button {
     flex: 0.95;
     justify-content: center;
     gap: 14px;
+    position: relative;
+}
+
+.sound-panel {
+    display: none;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #fff8e8;
+}
+
+.sound-panel.show {
+    display: flex;
+    flex-direction: column;
+}
+
+.sound-panel-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.sound-option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sound-toggle {
+    min-width: 88px;
+    padding: 10px 14px;
 }
 
 .course-name {
