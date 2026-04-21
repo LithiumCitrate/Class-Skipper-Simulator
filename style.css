@@ -297,6 +297,10 @@ button {
     font-weight: 700;
 }
 
+.marker-short {
+    display: none;
+}
+
 .dormitory {
     left: 69%;
     top: 56%;
@@ -855,5 +859,89 @@ button {
     .notice-actions,
     .building-actions {
         justify-content: stretch;
+    }
+}
+
+@media (max-width: 640px) {
+    .game-shell {
+        padding: 8px;
+    }
+
+    .hud-panel {
+        gap: 12px;
+    }
+
+    .map-stage {
+        aspect-ratio: 3704 / 1600;
+    }
+
+    .location-marker {
+        min-width: auto;
+        padding: 4px 6px;
+        border-width: 3px;
+        box-shadow: 0 4px 0 var(--marker-shadow);
+    }
+
+    .wait-marker {
+        padding: 4px 6px;
+    }
+
+    .marker-full {
+        display: none;
+    }
+
+    .marker-short {
+        display: inline;
+        font-size: 14px;
+        line-height: 1;
+    }
+
+    .dormitory {
+        left: 60%;
+        top: 72%;
+    }
+
+    .canteen {
+        left: 77%;
+        top: 71%;
+    }
+
+    .libraryGate {
+        left: 28%;
+        top: 55%;
+    }
+
+    .building7 {
+        left: 60%;
+        top: 49%;
+    }
+
+    .building3 {
+        left: 77%;
+        top: 40%;
+    }
+
+    .player {
+        width: 24px;
+        height: 24px;
+    }
+
+    .course-name {
+        font-size: 24px;
+    }
+
+    .course-meta,
+    .gossip-line,
+    .gossip-quote {
+        font-size: 14px;
+    }
+
+    .course-countdown {
+        font-size: 16px;
+    }
+
+    .badge {
+        font-size: 12px;
+        padding: 5px 8px;
     }
 }
