@@ -84,6 +84,29 @@ const roadGraph = {
     building3: { canteen: 180 }
 };
 
+const roadWaypoints = {
+    "dormitory:canteen": [
+        { x: 70.4, y: 82.6 },
+        { x: 82.0, y: 82.6 }
+    ],
+    "dormitory:libraryGate": [
+        { x: 70.4, y: 82.6 },
+        { x: 49.2, y: 82.6 },
+        { x: 49.2, y: 54.8 },
+        { x: 24.0, y: 54.8 }
+    ],
+    "libraryGate:building7": [
+        { x: 24.0, y: 49.8 },
+        { x: 24.0, y: 25.4 },
+        { x: 64.2, y: 25.4 }
+    ],
+    "canteen:building3": [
+        { x: 82.0, y: 58.8 },
+        { x: 82.0, y: 41.4 },
+        { x: 88.3, y: 41.4 }
+    ]
+};
+
 const teacherMoods = [
     {
         id: "slack",
@@ -796,18 +819,75 @@ function buildSegmentsFromPath(path) {
     for (let index = 0; index < path.length - 1; index += 1) {
         const from = path[index];
         const to = path[index + 1];
-        const time = Math.round(roadGraph[from][to] * gameState.eventEffects.moveTimeMultiplier);
-        segments.push({
-            from,
-            to,
-            fromPoint: locations[from],
-            toPoint: locations[to],
-            time
+        const edgeTime = Math.round(roadGraph[from][to] * gameState.eventEffects.moveTimeMultiplier);
+        const edgePoints = getRoutePoints(from, to);
+        const edgeSegments = buildSegmentsForPoints(from, to, edgePoints, edgeTime);
+
+        edgeSegments.forEach((segment) => {
+            segments.push(segment);
+            totalTime += segment.time;
         });
-        totalTime += time;
     }
 
     return { segments, totalTime };
+}
+
+function getRoutePoints(from, to) {
+    const directKey = `${from}:${to}`;
+    if (roadWaypoints[directKey]) {
+        return [locations[from], ...roadWaypoints[directKey], locations[to]];
+    }
+
+    const reverseKey = `${to}:${from}`;
+    if (roadWaypoints[reverseKey]) {
+        return [locations[from], ...[...roadWaypoints[reverseKey]].reverse(), locations[to]];
+    }
+
+    return [locations[from], locations[to]];
+}
+
+function buildSegmentsForPoints(from, to, points, totalTime) {
+    if (points.length < 2) {
+        return [];
+    }
+
+    const distances = [];
+    let distanceSum = 0;
+
+    for (let index = 0; index < points.length - 1; index += 1) {
+        const distance = getPointDistance(points[index], points[index + 1]);
+        distances.push(distance);
+        distanceSum += distance;
+    }
+
+    let remainingTime = Math.max(1, totalTime);
+    let remainingDistance = Math.max(distanceSum, 1);
+
+    return distances.map((distance, index) => {
+        const isLastSegment = index === distances.length - 1;
+        const remainingSegments = distances.length - index - 1;
+        const suggestedTime = Math.round((distance / remainingDistance) * remainingTime);
+        const segmentTime = isLastSegment
+            ? remainingTime
+            : Math.max(1, Math.min(remainingTime - remainingSegments, suggestedTime));
+
+        remainingTime -= segmentTime;
+        remainingDistance -= distance;
+
+        return {
+            from,
+            to,
+            fromPoint: points[index],
+            toPoint: points[index + 1],
+            time: Math.max(1, segmentTime)
+        };
+    });
+}
+
+function getPointDistance(fromPoint, toPoint) {
+    const dx = toPoint.x - fromPoint.x;
+    const dy = toPoint.y - fromPoint.y;
+    return Math.sqrt(dx * dx + dy * dy);
 }
 
 function findShortestPath(start, target) {
