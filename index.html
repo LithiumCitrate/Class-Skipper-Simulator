@@ -40,17 +40,11 @@
                     <button class="location-marker dormitory" id="dormitoryBtn" type="button">
                         <span class="marker-name">寝室</span>
                     </button>
-                    <button class="location-marker wait-marker lakeside" id="lakesideBtn" type="button">
-                        <span class="marker-name">湖边路口</span>
-                    </button>
-                    <button class="location-marker wait-marker eastPath" id="eastPathBtn" type="button">
-                        <span class="marker-name">东侧路口</span>
+                    <button class="location-marker wait-marker canteen" id="canteenBtn" type="button">
+                        <span class="marker-name">食堂</span>
                     </button>
                     <button class="location-marker wait-marker libraryGate" id="libraryGateBtn" type="button">
                         <span class="marker-name">图书馆</span>
-                    </button>
-                    <button class="location-marker wait-marker route7" id="route7Btn" type="button">
-                        <span class="marker-name">7号楼路口</span>
                     </button>
                     <button class="location-marker building7" id="building7Btn" type="button">
                         <span class="marker-name">7 号教学楼</span>
@@ -71,7 +65,7 @@
                 <div class="pixel-card course-panel">
                     <span class="course-label">今日课程</span>
                     <strong class="course-name" id="courseNameLarge">等待开始</strong>
-                    <p class="course-meta" id="courseMeta">每天开始上课前有 30 秒准备时间。</p>
+                    <p class="course-meta" id="courseMeta">每天开始上课前有 20 秒现实时间准备，对应 400 秒游戏时间。</p>
                     <p class="course-countdown" id="courseCountdown">点击开始游戏</p>
                     <div class="badge-row" id="courseBadgeRow"></div>
                 </div>
@@ -81,7 +75,7 @@
                     <p class="gossip-line"><strong>老师状态：</strong><span id="teacherMood">未刷新</span></p>
                     <p class="gossip-line"><strong>室友靠谱度：</strong><span id="roommateMood">未刷新</span></p>
                     <p class="gossip-line"><strong>校园消息：</strong><span id="campusBuzz">今天还没人放风。</span></p>
-                    <p class="gossip-quote" id="gossipQuote">“这节不点名”通常和“老师马上下课”一样不可信。</p>
+                    <p class="gossip-quote" id="gossipQuote">“这节不点名”和“老师马上下课”通常一样不可信。</p>
                 </div>
 
                 <div class="pixel-card action-panel">
@@ -91,12 +85,82 @@
                         <button id="pauseBtn" class="pixel-button" type="button" disabled>暂停</button>
                         <button id="resetBtn" class="pixel-button ghost" type="button">重开</button>
                     </div>
+                    <button id="noticeBtn" class="pixel-button ghost" type="button">公告</button>
+                    <button id="soundBtn" class="pixel-button ghost" type="button">音效：开</button>
                 </div>
             </div>
         </section>
     </main>
 
     <div class="notification" id="notification" role="status" aria-live="polite"></div>
+
+    <section class="building-overlay" id="buildingOverlay" aria-hidden="true">
+        <div class="building-card pixel-card">
+            <div class="building-copy">
+                <span class="card-kicker">教学楼内场景</span>
+                <h2 id="buildingTitle">教学楼</h2>
+                <p id="buildingSubtitle">先看看今天教室藏在哪一层。</p>
+            </div>
+            <div class="building-scene pixel-frame">
+                <div class="building-scene-info">
+                    <p id="buildingHint">班群还在互相甩锅，楼层消息半真半假。</p>
+                    <p id="buildingFlavor">楼道里一切都很安静，安静得像在等你踩空。</p>
+                </div>
+            </div>
+            <div class="floor-grid" id="floorGrid">
+                <button class="pixel-button floor-button" data-floor="1" type="button">1F</button>
+                <button class="pixel-button floor-button" data-floor="2" type="button">2F</button>
+                <button class="pixel-button floor-button" data-floor="3" type="button">3F</button>
+                <button class="pixel-button floor-button" data-floor="4" type="button">4F</button>
+            </div>
+            <div class="building-actions">
+                <button class="pixel-button ghost" id="leaveBuildingBtn" type="button">先回楼道蹲着</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="notice-overlay" id="noticeOverlay" aria-hidden="true">
+        <div class="notice-board" aria-hidden="true">
+            <span class="board-pin board-pin-left"></span>
+            <span class="board-pin board-pin-right"></span>
+            <div class="notice-card pixel-card">
+                <div class="notice-copy">
+                    <span class="card-kicker">开学前公告</span>
+                    <div class="notice-heading-row">
+                        <h2>逃课模拟器玩法须知</h2>
+                        <span class="notice-stamp">新生必读</span>
+                    </div>
+                    <p>这不是彻底摆烂模拟器，而是“只混到刚刚好”的校园踩线艺术。</p>
+                </div>
+                <div class="notice-content">
+                    <p>1. 每天开课前有 20 秒现实时间准备，你可以留在寝室，也可以提前去图书馆或食堂蹲点。</p>
+                    <p>2. 路线只有两条：去 7 号教学楼必须经过图书馆，去 3 号教学楼走食堂线，别想横穿草坪抄近路。</p>
+                    <p>3. 到教学楼后还不算安全，你得先进楼选楼层。每天教室会随机刷在 1F-4F，班群传闻不一定靠谱。</p>
+                    <p>4. 点名前赶到并进对教室，才算补到成功；点名后你要判断是继续留下，还是赌一把直接开溜。</p>
+                    <p>5. 老实上课会拿到稳定分数，提前跑掉则要面对二次点名回马枪。失败累计 3 次，这学期你就成名单常驻嘉宾了。</p>
+                </div>
+                <div class="notice-footer">
+                    <span class="notice-tag">教务处不承认</span>
+                    <span class="notice-tag">宿舍群已传疯</span>
+                </div>
+                <div class="notice-actions">
+                    <button class="pixel-button accent" id="noticeCloseBtn" type="button">知道了，继续作战</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="attendance-overlay" id="attendanceOverlay" aria-hidden="true">
+        <div class="attendance-card pixel-card">
+            <span class="card-kicker">点名后决策</span>
+            <h2 id="attendanceTitle">老师刚点完名</h2>
+            <p class="attendance-copy" id="attendanceMessage">现在要决定是继续留着当老实人，还是趁老师转身直接开溜。</p>
+            <div class="attendance-actions">
+                <button class="pixel-button ghost" id="attendanceRunBtn" type="button">直接跑掉</button>
+                <button class="pixel-button accent" id="attendanceStayBtn" type="button">继续留着</button>
+            </div>
+        </div>
+    </section>
 
     <section class="game-over-screen" id="gameOverScreen" aria-hidden="true">
         <div class="game-over-content pixel-card">

@@ -6,6 +6,9 @@ const ROOMMATE_TRIGGER_AFTER_CLASS = 5 * 60;
 const SECOND_ROLL_CALL_OFFSET = 3 * 60;
 const TICK_MS = 100;
 const GAME_SECONDS_PER_TICK = 2;
+const FLOOR_OPTIONS = [1, 2, 3, 4];
+const FLOOR_SEARCH_PENALTY_SECONDS = 90;
+const ESCAPE_SUCCESS_SCORE = 1;
 
 const courses = [
     {
@@ -13,11 +16,11 @@ const courses = [
         name: "高等数学",
         location: "building7",
         teacher: "张老师",
-        riskLabel: "随缘点名",
+        riskLabel: "随机点名",
         rollCallChance: 0.35,
         secondRollCallChance: 0.08,
         intro: "张老师嘴上说只讲一遍，名单倒是会讲很多遍。",
-        quote: "这题没听懂没关系，点名的时候记得答到。"
+        quote: "题可以不会，点名的时候人得会出现。"
     },
     {
         id: "linear",
@@ -27,30 +30,30 @@ const courses = [
         riskLabel: "看心情",
         rollCallChance: 0.28,
         secondRollCallChance: 0.12,
-        intro: "李老师属于那种表情很平静，但会突然翻名单的人。",
-        quote: "矩阵可以不会，点名不能不在。"
+        intro: "李老师平时很平静，但会突然翻开那本令人心寒的名单。",
+        quote: "矩阵可以晚点懂，到课最好别晚。"
     },
     {
         id: "programming",
         name: "程序设计",
         location: "building7",
         teacher: "王老师",
-        riskLabel: "抽查型",
+        riskLabel: "现场抽查",
         rollCallChance: 0.24,
         secondRollCallChance: 0.15,
-        intro: "程序设计不一定点名，但很可能现场抓人解释 bug。",
-        quote: "代码没跑起来没关系，人先到。"
+        intro: "这课不一定点名，但很可能现场抓人解释 bug 为什么会长这样。",
+        quote: "代码可以不跑，座位最好先到。"
     },
     {
         id: "ideology",
         name: "思想政治",
         location: "building3",
         teacher: "陈老师",
-        riskLabel: "高压巡逻",
+        riskLabel: "高压巡查",
         rollCallChance: 0.7,
         secondRollCallChance: 0.45,
-        intro: "陈老师是那种会在你松口气之后再来一轮的人。",
-        quote: "我就随便看看名单，不用紧张。"
+        intro: "陈老师擅长在你刚松口气的时候，顺手再来一轮。",
+        quote: "我就随便看看名单，你们不用紧张。"
     },
     {
         id: "history",
@@ -60,31 +63,25 @@ const courses = [
         riskLabel: "名单在手",
         rollCallChance: 0.76,
         secondRollCallChance: 0.55,
-        intro: "刘老师和名单是绑定刷新，今天大概率不讲武德。",
+        intro: "刘老师和名单是绑定刷新的，今天大概率不讲武德。",
         quote: "后排同学别躲，我看见你们了。"
     }
 ];
 
 const locations = {
     dormitory: { x: 70.4, y: 75.6, name: "寝室" },
-    lakeside: { x: 72.8, y: 47.4, name: "湖边路口" },
-    eastPath: { x: 78.4, y: 70.8, name: "东侧路口" },
-    libraryGate: { x: 49.5, y: 47.4, name: "图书馆" },
-    route7: { x: 64.2, y: 47.4, name: "7号楼路口" },
-    northPath: { x: 78.4, y: 20.2, name: "教学楼路口" },
+    canteen: { x: 82.0, y: 70.8, name: "食堂" },
+    libraryGate: { x: 24.0, y: 41.8, name: "图书馆" },
     building7: { x: 64.2, y: 41.1, name: "7号教学楼" },
     building3: { x: 88.3, y: 27.7, name: "3号教学楼" }
 };
 
 const roadGraph = {
-    dormitory: { lakeside: 120, eastPath: 120 },
-    lakeside: { dormitory: 120, libraryGate: 120 },
-    libraryGate: { lakeside: 120, route7: 180 },
-    route7: { libraryGate: 180, building7: 180 },
-    eastPath: { dormitory: 120, northPath: 120 },
-    northPath: { eastPath: 120, building3: 60 },
-    building7: { route7: 180 },
-    building3: { northPath: 60 }
+    dormitory: { libraryGate: 420, canteen: 120 },
+    libraryGate: { dormitory: 420, building7: 180 },
+    canteen: { dormitory: 120, building3: 180 },
+    building7: { libraryGate: 180 },
+    building3: { canteen: 180 }
 };
 
 const teacherMoods = [
@@ -119,8 +116,8 @@ const roommateProfiles = [
         id: "sleeping",
         name: "睡死了",
         warningChance: 0.2,
-        headline: "室友昨晚通宵，今天消息像投进黑洞。",
-        quote: "你指望他报信，不如指望老师忘带名单。"
+        headline: "室友昨晚通宵，今天消息像扔进黑洞。",
+        quote: "指望他通风报信，不如指望老师忘带名单。"
     },
     {
         id: "online",
@@ -131,7 +128,7 @@ const roommateProfiles = [
     },
     {
         id: "reliable",
-        name: "消息秒回",
+        name: "秒回战神",
         warningChance: 0.85,
         headline: "室友今天是电子哨兵，风吹草动都会转发。",
         quote: "宿舍战神已上线，名单一翻他先急。"
@@ -143,7 +140,7 @@ const campusBuzzPool = [
     "食堂排队的人都在聊今天查得严，消息来源极其混乱。",
     "有人看见老师提前进楼了，真假未知，但听着就让人腿软。",
     "据说今天只是走流程，问题是老师的流程通常包括翻名单。",
-    "隔壁班说这节老师心情一般，‘一般’通常意味着更危险。"
+    "隔壁班说这节老师心情一般，“一般”通常意味着更危险。"
 ];
 
 const dayHeadlines = [
@@ -157,7 +154,7 @@ const specialEvents = [
     {
         id: "monitor_ping",
         name: "班长探头",
-        summary: "班长突然在群里问“都到齐了吗”，会把第一次点名提前一点。",
+        summary: "班长突然在群里问“都到齐了吗”，会把第一轮点名提前一点。",
         apply(state) {
             state.eventEffects.firstRollCallOffset = -120;
         },
@@ -188,30 +185,53 @@ const specialEvents = [
     {
         id: "roommate_live",
         name: "室友现场直播",
-        summary: "室友今天在教室前排，还会额外提高一次提醒成功率。",
+        summary: "室友今天人在教室前排，还会额外提高一次提醒成功率。",
         apply(state) {
             state.eventEffects.roommateWarningDelta = 0.2;
         },
         triggerMessage: "室友今天人在前排，已经开启课堂实况转播模式。",
-        badge: "前排眼线"
+        badge: "前排视野"
     }
 ];
+
+const floorVibes = {
+    building7: {
+        1: "一楼人来人往，像每个人都知道自己去哪，只有你像游客。",
+        2: "二楼拐角全是抱书路过的同学，气氛很像临时抱佛脚展览。",
+        3: "三楼安静得可疑，像老师们专门留给迟到生的心理压力测试。",
+        4: "四楼风很大，腿也很酸，适合思考人生和为什么不早点出门。"
+    },
+    building3: {
+        1: "一楼公告栏前围着一圈人，像每个人都在等命运刷新。",
+        2: "二楼楼道回声很重，你每一步都像在给自己配音。",
+        3: "三楼全是熟悉又不熟的面孔，社恐看了想原地撤退。",
+        4: "四楼充满一种“都爬到这了不如顺便上课”的宿命感。"
+    }
+};
 
 const gameState = {
     isRunning: false,
     isPaused: false,
     isMoving: false,
+    isInsideBuilding: false,
+    isNoticeOpen: false,
+    noticeResumeAfterClose: false,
+    attendanceResumeAfterClose: false,
+    hasSeenNotice: false,
     dayCount: 0,
     dayTime: 0,
     score: 0,
     failCount: 0,
     currentLocation: "dormitory",
+    currentMoveTarget: null,
+    currentBuildingScene: null,
     playerPosition: { ...locations.dormitory },
     todayClass: null,
+    todayClassFloor: null,
+    todayFloorRumor: null,
     teacherMood: null,
     roommateProfile: null,
     campusBuzz: "",
-    currentMoveTarget: null,
     moveSegments: [],
     moveSegmentIndex: 0,
     moveSegmentElapsed: 0,
@@ -220,6 +240,10 @@ const gameState = {
     moveEnterClassOnArrival: false,
     classArrivalTime: null,
     isInClass: false,
+    pendingAttendanceDecision: false,
+    escapedAfterRollCall: false,
+    committedToClass: false,
+    honestClassSettled: false,
     shouldFirstRollCall: false,
     firstRollCallResolved: false,
     secondRollCallResolved: false,
@@ -227,7 +251,15 @@ const gameState = {
     roommateWarned: false,
     roommateRolled: false,
     specialEvent: null,
-    eventEffects: null
+    eventEffects: null,
+    soundEnabled: true,
+    audioReady: false,
+    floorSearchAttempts: 0,
+    wrongFloorCount: 0,
+    perfectFloorGuessCount: 0,
+    narrowEscapeCount: 0,
+    secondRollCallHitCount: 0,
+    warningSaveCount: 0
 };
 
 const elements = {
@@ -238,12 +270,12 @@ const elements = {
     startBtn: document.getElementById("startBtn"),
     pauseBtn: document.getElementById("pauseBtn"),
     resetBtn: document.getElementById("resetBtn"),
+    noticeBtn: document.getElementById("noticeBtn"),
+    soundBtn: document.getElementById("soundBtn"),
     goClassBtn: document.getElementById("goClassBtn"),
     dormitoryBtn: document.getElementById("dormitoryBtn"),
-    lakesideBtn: document.getElementById("lakesideBtn"),
-    eastPathBtn: document.getElementById("eastPathBtn"),
+    canteenBtn: document.getElementById("canteenBtn"),
     libraryGateBtn: document.getElementById("libraryGateBtn"),
-    route7Btn: document.getElementById("route7Btn"),
     building7Btn: document.getElementById("building7Btn"),
     building3Btn: document.getElementById("building3Btn"),
     player: document.getElementById("player"),
@@ -257,6 +289,21 @@ const elements = {
     campusBuzz: document.getElementById("campusBuzz"),
     gossipQuote: document.getElementById("gossipQuote"),
     notification: document.getElementById("notification"),
+    mapStage: document.querySelector(".map-stage"),
+    buildingOverlay: document.getElementById("buildingOverlay"),
+    buildingTitle: document.getElementById("buildingTitle"),
+    buildingSubtitle: document.getElementById("buildingSubtitle"),
+    buildingHint: document.getElementById("buildingHint"),
+    buildingFlavor: document.getElementById("buildingFlavor"),
+    floorButtons: Array.from(document.querySelectorAll(".floor-button")),
+    leaveBuildingBtn: document.getElementById("leaveBuildingBtn"),
+    noticeOverlay: document.getElementById("noticeOverlay"),
+    noticeCloseBtn: document.getElementById("noticeCloseBtn"),
+    attendanceOverlay: document.getElementById("attendanceOverlay"),
+    attendanceTitle: document.getElementById("attendanceTitle"),
+    attendanceMessage: document.getElementById("attendanceMessage"),
+    attendanceRunBtn: document.getElementById("attendanceRunBtn"),
+    attendanceStayBtn: document.getElementById("attendanceStayBtn"),
     gameOverScreen: document.getElementById("gameOverScreen"),
     gameOverTitle: document.getElementById("gameOverTitle"),
     gameOverMessage: document.getElementById("gameOverMessage"),
@@ -267,6 +314,8 @@ const elements = {
 
 let gameInterval = null;
 let notificationTimeout = null;
+let feedbackTimeout = null;
+let audioContext = null;
 
 function initGame() {
     clearInterval(gameInterval);
@@ -276,17 +325,25 @@ function initGame() {
         isRunning: false,
         isPaused: false,
         isMoving: false,
+        isInsideBuilding: false,
+        isNoticeOpen: false,
+        noticeResumeAfterClose: false,
+        attendanceResumeAfterClose: false,
+        hasSeenNotice: false,
         dayCount: 0,
         dayTime: 0,
         score: 0,
         failCount: 0,
         currentLocation: "dormitory",
+        currentMoveTarget: null,
+        currentBuildingScene: null,
         playerPosition: { ...locations.dormitory },
         todayClass: null,
+        todayClassFloor: null,
+        todayFloorRumor: null,
         teacherMood: null,
         roommateProfile: null,
         campusBuzz: "",
-        currentMoveTarget: null,
         moveSegments: [],
         moveSegmentIndex: 0,
         moveSegmentElapsed: 0,
@@ -295,6 +352,10 @@ function initGame() {
         moveEnterClassOnArrival: false,
         classArrivalTime: null,
         isInClass: false,
+        pendingAttendanceDecision: false,
+        escapedAfterRollCall: false,
+        committedToClass: false,
+        honestClassSettled: false,
         shouldFirstRollCall: false,
         firstRollCallResolved: false,
         secondRollCallResolved: false,
@@ -302,22 +363,35 @@ function initGame() {
         roommateWarned: false,
         roommateRolled: false,
         specialEvent: null,
-        eventEffects: createDefaultEventEffects()
+        eventEffects: createDefaultEventEffects(),
+        soundEnabled: true,
+        audioReady: false,
+        floorSearchAttempts: 0,
+        wrongFloorCount: 0,
+        perfectFloorGuessCount: 0,
+        narrowEscapeCount: 0,
+        secondRollCallHitCount: 0,
+        warningSaveCount: 0
     });
 
     elements.startBtn.disabled = false;
     elements.pauseBtn.disabled = true;
     elements.pauseBtn.textContent = "暂停";
     elements.goClassBtn.disabled = true;
+    elements.soundBtn.textContent = "音效：开";
     elements.gameOverScreen.classList.remove("show");
     elements.gameOverScreen.setAttribute("aria-hidden", "true");
+    closeBuildingOverlay(false);
+    closeNoticeOverlay(false);
+    closeAttendanceOverlay(false);
     elements.player.classList.remove("moving");
     elements.player.style.setProperty("--player-facing", "1");
-
     updateUI();
+    openNoticeOverlay({ auto: true });
 }
 
 function startGame() {
+    ensureAudioReady();
     if (gameState.isRunning && !gameState.isPaused) {
         return;
     }
@@ -336,13 +410,14 @@ function startGame() {
     gameInterval = setInterval(() => {
         gameState.dayTime += GAME_SECONDS_PER_TICK;
         advanceMovement(GAME_SECONDS_PER_TICK);
+        checkCourseLogic();
 
         if (gameState.dayTime >= DAY_LENGTH_SECONDS) {
+            settleClassAtDayEnd();
             nextDay();
             return;
         }
 
-        checkCourseLogic();
         checkGameStatus();
         updateUI();
     }, TICK_MS);
@@ -353,15 +428,41 @@ function pauseGame() {
         return;
     }
 
+    if (gameState.isNoticeOpen || gameState.pendingAttendanceDecision) {
+        return;
+    }
+
     gameState.isPaused = !gameState.isPaused;
     if (gameState.isPaused) {
         clearInterval(gameInterval);
         gameInterval = null;
         elements.pauseBtn.textContent = "继续";
         showNotification("时间暂停了，人物和路线会一起冻结。", "info");
-    } else {
-        startGame();
+        return;
     }
+
+    startGame();
+}
+
+function pauseForOverlay() {
+    if (!gameState.isRunning || gameState.isPaused) {
+        return false;
+    }
+
+    clearInterval(gameInterval);
+    gameInterval = null;
+    gameState.isPaused = true;
+    elements.pauseBtn.textContent = "继续";
+    return true;
+}
+
+function resumeAfterOverlay() {
+    if (!gameState.noticeResumeAfterClose) {
+        return;
+    }
+
+    gameState.noticeResumeAfterClose = false;
+    startGame();
 }
 
 function resetGame() {
@@ -373,37 +474,47 @@ function startNewDay() {
     gameState.dayCount += 1;
     gameState.dayTime = 0;
     gameState.todayClass = sample(courses);
+    gameState.todayClassFloor = sample(FLOOR_OPTIONS);
     gameState.teacherMood = sample(teacherMoods);
     gameState.roommateProfile = sample(roommateProfiles);
     gameState.campusBuzz = sample(campusBuzzPool);
+    gameState.todayFloorRumor = createFloorRumor();
     gameState.currentLocation = "dormitory";
-    gameState.playerPosition = { ...locations.dormitory };
-    gameState.isMoving = false;
     gameState.currentMoveTarget = null;
+    gameState.currentBuildingScene = null;
+    gameState.playerPosition = { ...locations.dormitory };
     gameState.moveSegments = [];
     gameState.moveSegmentIndex = 0;
     gameState.moveSegmentElapsed = 0;
     gameState.moveElapsedTotal = 0;
     gameState.moveTotalTime = 0;
     gameState.moveEnterClassOnArrival = false;
+    gameState.isMoving = false;
+    gameState.isInsideBuilding = false;
     gameState.classArrivalTime = null;
     gameState.isInClass = false;
+    gameState.pendingAttendanceDecision = false;
+    gameState.escapedAfterRollCall = false;
+    gameState.committedToClass = false;
+    gameState.honestClassSettled = false;
     gameState.shouldFirstRollCall = false;
     gameState.firstRollCallResolved = false;
     gameState.secondRollCallResolved = false;
     gameState.roommateWarned = false;
     gameState.roommateRolled = false;
+    gameState.floorSearchAttempts = 0;
     gameState.specialEvent = sample(specialEvents);
     gameState.eventEffects = createDefaultEventEffects();
     gameState.specialEvent.apply(gameState);
     gameState.shouldFirstRollCall = Math.random() < getEffectiveRollCallChance();
     gameState.shouldSecondRollCall = rollSecondCall();
     elements.player.classList.remove("moving");
+    closeBuildingOverlay(false);
+    closeAttendanceOverlay(false);
 
     elements.headlineCopy.textContent = sample(dayHeadlines);
-
     showNotification(
-        `第 ${gameState.dayCount} 天开始。今天是 ${gameState.todayClass.name}，${gameState.teacherMood.name}模式，先看风声再行动。`,
+        `第 ${gameState.dayCount} 天开始。今天是 ${gameState.todayClass.name}，${gameState.teacherMood.name} 模式，班群传闻在 ${formatFloor(gameState.todayFloorRumor.hintedFloor)}。`,
         "info"
     );
     showNotification(gameState.specialEvent.triggerMessage, "warning");
@@ -421,35 +532,38 @@ function nextDay() {
 
 function updateUI() {
     elements.dayCount.textContent = gameState.dayCount;
-    elements.currentLocation.textContent = locations[gameState.currentLocation]?.name ?? "路上";
+    elements.currentLocation.textContent = gameState.isInsideBuilding
+        ? `${locations[gameState.currentLocation]?.name ?? "楼内"}`
+        : locations[gameState.currentLocation]?.name ?? "路上";
     elements.score.textContent = gameState.score;
     elements.failCount.textContent = gameState.failCount;
 
     if (gameState.todayClass) {
         const locationName = locations[gameState.todayClass.location].name;
         elements.courseNameLarge.textContent = gameState.todayClass.name;
-        elements.courseMeta.textContent = `${gameState.todayClass.teacher} · 上课地点 ${locationName} · ${gameState.todayClass.intro}`;
+        elements.courseMeta.textContent = `${gameState.todayClass.teacher} · 上课地点 ${locationName} · 班群传闻 ${formatFloor(gameState.todayFloorRumor?.hintedFloor)} · ${gameState.todayClass.intro}`;
         elements.courseCountdown.textContent = getCourseStatusText();
-        elements.teacherMood.textContent = `${gameState.teacherMood.name}，${gameState.teacherMood.headline}`;
-        elements.roommateMood.textContent = `${gameState.roommateProfile.name}，${gameState.roommateProfile.headline}`;
+        elements.teacherMood.textContent = `${gameState.teacherMood.name}：${gameState.teacherMood.headline}`;
+        elements.roommateMood.textContent = `${gameState.roommateProfile.name}：${gameState.roommateProfile.headline}`;
         elements.campusBuzz.textContent = gameState.campusBuzz;
         elements.gossipQuote.textContent = `“${getQuoteForToday()}”`;
         renderCourseBadges();
         elements.goClassBtn.disabled = !gameState.isRunning || gameState.isPaused || gameState.isMoving;
     } else {
         elements.courseNameLarge.textContent = "等待开始";
-        elements.courseMeta.textContent = "每天开始上课前有 30 秒准备时间。";
+        elements.courseMeta.textContent = "每天开始上课前有 20 秒现实时间准备，对应 400 秒游戏时间。";
         elements.courseCountdown.textContent = "点击开始游戏";
         elements.teacherMood.textContent = "未刷新";
         elements.roommateMood.textContent = "未刷新";
         elements.campusBuzz.textContent = "今天还没人放风。";
-        elements.gossipQuote.textContent = "“这节不点名”通常和“老师马上下课”一样不可信。";
+        elements.gossipQuote.textContent = "“这节不点名”和“老师马上下课”通常一样不可信。";
         elements.courseBadgeRow.innerHTML = "";
         elements.goClassBtn.disabled = true;
     }
 
     updatePlayerPosition();
     updateMarkers();
+    renderBuildingOverlay();
 }
 
 function renderCourseBadges() {
@@ -457,13 +571,12 @@ function renderCourseBadges() {
         gameState.todayClass.riskLabel,
         gameState.teacherMood.name,
         gameState.roommateProfile.name,
-        gameState.shouldSecondRollCall ? "疑似二次点名" : "今日一轮点名",
+        gameState.shouldSecondRollCall ? "疑似二次点名" : "今日单轮点名",
+        `传闻${formatFloor(gameState.todayFloorRumor?.hintedFloor)}`,
         gameState.specialEvent?.badge ?? "今日无事"
     ];
 
-    elements.courseBadgeRow.innerHTML = badges
-        .map((label) => `<span class="badge">${label}</span>`)
-        .join("");
+    elements.courseBadgeRow.innerHTML = badges.map((label) => `<span class="badge">${label}</span>`).join("");
 }
 
 function getCourseStatusText() {
@@ -473,7 +586,29 @@ function getCourseStatusText() {
 
     if (gameState.isMoving && gameState.currentMoveTarget) {
         const remaining = Math.max(0, gameState.moveTotalTime - gameState.moveElapsedTotal);
-        return `沿道路前往 ${locations[gameState.currentMoveTarget].name}，还需 ${Math.ceil(remaining)} 秒。`;
+        return `沿路前往 ${locations[gameState.currentMoveTarget].name}，还需 ${Math.ceil(remaining)} 秒。`;
+    }
+
+    if (gameState.isInsideBuilding && gameState.currentBuildingScene) {
+        return `你已经冲进 ${locations[gameState.currentBuildingScene].name}，正在楼道里赌今天教室藏在哪层。跑错一层会额外浪费 ${FLOOR_SEARCH_PENALTY_SECONDS} 秒。`;
+    }
+
+    if (gameState.pendingAttendanceDecision) {
+        return "老师刚点完名，你得立刻决定是继续留着还是直接跑掉。";
+    }
+
+    if (gameState.committedToClass && gameState.isInClass) {
+        return gameState.shouldSecondRollCall && !gameState.secondRollCallResolved
+            ? "你决定老实留在教室里。现在不加分也不扣分，但得防老师二次点名。"
+            : "你决定老实留在教室里。今天这节课不加分，也不扣分，熬到下课就算平安。";
+    }
+
+    if (gameState.escapedAfterRollCall && gameState.shouldSecondRollCall && !gameState.secondRollCallResolved) {
+        return "你已经在第一次点名后开溜，但老师可能还会回头补刀。";
+    }
+
+    if (gameState.currentLocation === gameState.todayClass.location && !gameState.isInClass) {
+        return `你已经到 ${locations[gameState.currentLocation].name} 楼下了，下一步是选楼层。班群统一口径是 ${formatFloor(gameState.todayFloorRumor?.hintedFloor)}。`;
     }
 
     if (gameState.dayTime < PREP_TIME_SECONDS) {
@@ -487,11 +622,11 @@ function getCourseStatusText() {
         if (!gameState.shouldFirstRollCall) {
             return "老师看起来还没打算点名，今天也许真能赌一把。";
         }
-        return `距离第一次点名还有 ${Math.max(0, firstRollCallTime - gameState.dayTime)} 秒。`;
+        return `距离第一轮点名还有 ${Math.max(0, firstRollCallTime - gameState.dayTime)} 秒。`;
     }
 
     if (gameState.shouldSecondRollCall && !gameState.secondRollCallResolved) {
-        return `第一次点名已过，老师还可能在 ${Math.max(0, secondRollCallTime - gameState.dayTime)} 秒后回头补刀。`;
+        return `第一轮点名已过，老师还可能在 ${Math.max(0, secondRollCallTime - gameState.dayTime)} 秒后回头补刀。`;
     }
 
     return "今天的点名流程已经结束，可以准备下一天了。";
@@ -521,15 +656,13 @@ function updatePlayerPosition() {
 
 function updateMarkers() {
     document.querySelectorAll(".location-marker").forEach((button) => {
-        button.classList.remove("active");
+        button.classList.remove("active", "target");
     });
 
     const activeMap = {
         dormitory: elements.dormitoryBtn,
-        lakeside: elements.lakesideBtn,
-        eastPath: elements.eastPathBtn,
+        canteen: elements.canteenBtn,
         libraryGate: elements.libraryGateBtn,
-        route7: elements.route7Btn,
         building7: elements.building7Btn,
         building3: elements.building3Btn
     };
@@ -538,6 +671,76 @@ function updateMarkers() {
     if (activeButton) {
         activeButton.classList.add("active");
     }
+
+    if (gameState.currentMoveTarget && activeMap[gameState.currentMoveTarget]) {
+        activeMap[gameState.currentMoveTarget].classList.add("target");
+    } else if (gameState.isInsideBuilding && activeButton) {
+        activeButton.classList.add("target");
+    }
+}
+
+function ensureAudioReady() {
+    if (gameState.audioReady || !gameState.soundEnabled) {
+        return;
+    }
+
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) {
+        return;
+    }
+
+    audioContext = new AudioContextCtor();
+    if (audioContext.state === "suspended") {
+        audioContext.resume();
+    }
+    gameState.audioReady = true;
+}
+
+function playFeedbackSound(type) {
+    if (!gameState.soundEnabled) {
+        return;
+    }
+
+    ensureAudioReady();
+    if (!audioContext) {
+        return;
+    }
+
+    const now = audioContext.currentTime;
+    const sequences = {
+        info: [392, 494],
+        success: [523, 659, 784],
+        warning: [440, 392, 440],
+        danger: [330, 247, 196]
+    };
+    const notes = sequences[type] || sequences.info;
+
+    notes.forEach((frequency, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = type === "danger" ? "sawtooth" : "square";
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, now + index * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.04, now + index * 0.08 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.08 + 0.07);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(now + index * 0.08);
+        oscillator.stop(now + index * 0.08 + 0.08);
+    });
+}
+
+function flashMapFeedback(type) {
+    clearTimeout(feedbackTimeout);
+    elements.mapStage.classList.remove("feedback-success", "feedback-warning", "feedback-danger");
+    if (!["success", "warning", "danger"].includes(type)) {
+        return;
+    }
+
+    elements.mapStage.classList.add(`feedback-${type}`);
+    feedbackTimeout = setTimeout(() => {
+        elements.mapStage.classList.remove("feedback-success", "feedback-warning", "feedback-danger");
+    }, 520);
 }
 
 function sample(list) {
@@ -656,7 +859,6 @@ function findShortestPath(start, target) {
 
     const path = [];
     let cursor = target;
-
     while (cursor) {
         path.unshift(cursor);
         cursor = previous[cursor];
@@ -668,6 +870,16 @@ function findShortestPath(start, target) {
 function moveToLocation(targetLocation, options = {}) {
     if (!gameState.isRunning || gameState.isPaused) {
         showNotification("先开始游戏。现在连蹲点都还没开始。", "warning");
+        return;
+    }
+
+    if (gameState.pendingAttendanceDecision) {
+        showNotification("先决定点名后是继续留着还是直接跑路。", "warning");
+        return;
+    }
+
+    if (gameState.isInsideBuilding) {
+        showNotification("先把楼层找明白，再决定往哪跑。", "warning");
         return;
     }
 
@@ -683,10 +895,11 @@ function moveToLocation(targetLocation, options = {}) {
 
     if (gameState.currentLocation === targetLocation) {
         if (options.enterClass && targetLocation === gameState.todayClass?.location) {
-            enterClassroom();
-        } else {
-            showNotification(`你已经在${locations[targetLocation].name}。继续蹲点也行。`, "info");
+            openBuildingOverlay(targetLocation);
+            return;
         }
+
+        showNotification(`你已经在${locations[targetLocation].name}。继续蹲点也行。`, "info");
         return;
     }
 
@@ -710,7 +923,7 @@ function moveToLocation(targetLocation, options = {}) {
     elements.player.classList.add("moving");
 
     showNotification(
-        `沿道路前往${locations[targetLocation].name}，预计 ${totalTime} 秒游戏时间。蹲点路线开始执行。`,
+        `沿路前往${locations[targetLocation].name}，预计 ${totalTime} 秒游戏时间。蹲点路线开始执行。`,
         "info"
     );
     updateUI();
@@ -722,7 +935,6 @@ function advanceMovement(stepSeconds) {
     }
 
     let remainingStep = stepSeconds;
-
     while (remainingStep > 0 && gameState.isMoving) {
         const segment = gameState.moveSegments[gameState.moveSegmentIndex];
         const remainingSegmentTime = segment.time - gameState.moveSegmentElapsed;
@@ -762,7 +974,8 @@ function finishMovement() {
 
     if (gameState.moveEnterClassOnArrival && targetLocation === gameState.todayClass?.location) {
         gameState.moveEnterClassOnArrival = false;
-        enterClassroom();
+        openBuildingOverlay(targetLocation);
+        showNotification(`已冲到${locations[targetLocation].name}门口，快决定楼层。`, "success");
         return;
     }
 
@@ -788,7 +1001,151 @@ function goToClass() {
         return;
     }
 
+    if (gameState.currentLocation === gameState.todayClass.location && !gameState.isMoving) {
+        openBuildingOverlay(gameState.todayClass.location);
+        return;
+    }
+
     moveToLocation(gameState.todayClass.location, { enterClass: true });
+}
+
+function openBuildingOverlay(buildingId) {
+    if (!isTeachingBuilding(buildingId)) {
+        return;
+    }
+
+    gameState.currentBuildingScene = buildingId;
+    gameState.isInsideBuilding = true;
+    elements.buildingOverlay.classList.add("show");
+    elements.buildingOverlay.setAttribute("aria-hidden", "false");
+    renderBuildingOverlay();
+}
+
+function openNoticeOverlay(options = {}) {
+    const { auto = false } = options;
+    if (gameState.isNoticeOpen) {
+        return;
+    }
+
+    gameState.noticeResumeAfterClose = pauseForOverlay();
+    gameState.isNoticeOpen = true;
+    if (auto) {
+        gameState.hasSeenNotice = true;
+    }
+    elements.noticeOverlay.classList.add("show");
+    elements.noticeOverlay.setAttribute("aria-hidden", "false");
+}
+
+function closeNoticeOverlay(withResume = true) {
+    gameState.isNoticeOpen = false;
+    elements.noticeOverlay.classList.remove("show");
+    elements.noticeOverlay.setAttribute("aria-hidden", "true");
+    if (withResume) {
+        resumeAfterOverlay();
+    }
+}
+
+function openAttendanceOverlay() {
+    if (!gameState.todayClass) {
+        return;
+    }
+
+    gameState.attendanceResumeAfterClose = pauseForOverlay();
+    gameState.pendingAttendanceDecision = true;
+    elements.attendanceTitle.textContent = `老师刚点完 ${gameState.todayClass.name} 的名`;
+    elements.attendanceMessage.textContent = gameState.shouldSecondRollCall
+        ? "你现在可以直接跑，但老师看起来不像准备收名单的样子。继续留着不会加分，也不会扣分；直接跑掉则有可能吃到二次点名。"
+        : "现在可以直接跑掉拿逃课分，也可以继续留在教室里当老实人。继续留着不会加分，也不会扣分。";
+    elements.attendanceOverlay.classList.add("show");
+    elements.attendanceOverlay.setAttribute("aria-hidden", "false");
+}
+
+function closeAttendanceOverlay(withResume = true) {
+    gameState.pendingAttendanceDecision = false;
+    elements.attendanceOverlay.classList.remove("show");
+    elements.attendanceOverlay.setAttribute("aria-hidden", "true");
+    if (withResume && gameState.attendanceResumeAfterClose) {
+        gameState.attendanceResumeAfterClose = false;
+        startGame();
+    } else {
+        gameState.attendanceResumeAfterClose = false;
+    }
+}
+
+function closeBuildingOverlay(withUpdate = true) {
+    gameState.isInsideBuilding = false;
+    gameState.currentBuildingScene = null;
+    elements.buildingOverlay.classList.remove("show");
+    elements.buildingOverlay.setAttribute("aria-hidden", "true");
+    if (withUpdate) {
+        updateUI();
+    }
+}
+
+function renderBuildingOverlay() {
+    if (!gameState.isInsideBuilding || !gameState.currentBuildingScene || !gameState.todayClass) {
+        elements.buildingOverlay.classList.remove("show");
+        elements.buildingOverlay.setAttribute("aria-hidden", "true");
+        return;
+    }
+
+    const buildingId = gameState.currentBuildingScene;
+    const atCorrectBuilding = buildingId === gameState.todayClass.location;
+    const recommendedFloor =
+        gameState.floorSearchAttempts >= 2 ? gameState.todayClassFloor : gameState.todayFloorRumor?.hintedFloor;
+    const hintText =
+        gameState.floorSearchAttempts >= 2
+            ? `你已经在楼里迷路两次，热心同学终于指路：教室真在 ${formatFloor(gameState.todayClassFloor)}。`
+            : getTodayRumorText();
+
+    elements.buildingOverlay.classList.add("show");
+    elements.buildingOverlay.setAttribute("aria-hidden", "false");
+    elements.buildingTitle.textContent = `${locations[buildingId].name} · 楼层选择`;
+    elements.buildingSubtitle.textContent = atCorrectBuilding
+        ? `${gameState.todayClass.name} 今天随机刷在某一层，你得先选对楼层。`
+        : `今天这门课不在这栋楼。你进来只会收获迷路和步数。`;
+    elements.buildingHint.textContent = atCorrectBuilding
+        ? hintText
+        : `这栋楼今天没有你的课。真正目标在 ${locations[gameState.todayClass.location].name}。`;
+    elements.buildingFlavor.textContent = getBuildingFlavor(buildingId, recommendedFloor);
+
+    elements.floorButtons.forEach((button) => {
+        const floor = Number(button.dataset.floor);
+        button.classList.toggle("recommended", atCorrectBuilding && recommendedFloor === floor);
+        button.classList.toggle("locked", !atCorrectBuilding);
+        button.disabled = !atCorrectBuilding;
+    });
+}
+
+function chooseFloor(floor) {
+    if (!gameState.isInsideBuilding || !gameState.todayClass) {
+        return;
+    }
+
+    if (gameState.currentBuildingScene !== gameState.todayClass.location) {
+        showNotification("这栋楼今天没你的课，再翻楼层也翻不出教室。", "warning");
+        return;
+    }
+
+    if (floor === gameState.todayClassFloor) {
+        if (gameState.floorSearchAttempts === 0) {
+            gameState.perfectFloorGuessCount += 1;
+        }
+        closeBuildingOverlay(false);
+        enterClassroom();
+        return;
+    }
+
+    gameState.floorSearchAttempts += 1;
+    gameState.wrongFloorCount += 1;
+    gameState.dayTime = Math.min(DAY_LENGTH_SECONDS, gameState.dayTime + FLOOR_SEARCH_PENALTY_SECONDS);
+    showNotification(
+        `你冲上了 ${formatFloor(floor)}，结果这层全是无关群众。白白浪费 ${FLOOR_SEARCH_PENALTY_SECONDS} 秒。`,
+        "warning"
+    );
+    checkCourseLogic();
+    checkGameStatus();
+    updateUI();
 }
 
 function enterClassroom() {
@@ -798,7 +1155,18 @@ function enterClassroom() {
 
     gameState.isInClass = true;
     gameState.classArrivalTime = gameState.dayTime;
-    showNotification(`你已经进入 ${gameState.todayClass.name} 教室。先低头装作刚到。`, "success");
+    gameState.pendingAttendanceDecision = false;
+    gameState.escapedAfterRollCall = false;
+    gameState.committedToClass = false;
+    gameState.honestClassSettled = false;
+    if (gameState.roommateWarned) {
+        gameState.warningSaveCount += 1;
+        gameState.roommateWarned = false;
+    }
+    showNotification(
+        `你已经进入 ${gameState.todayClass.name} 的 ${formatFloor(gameState.todayClassFloor)} 教室。先低头，装作刚到。`,
+        "success"
+    );
     updateUI();
 }
 
@@ -860,7 +1228,7 @@ function maybeTriggerRoommateWarning() {
 }
 
 function resolveRollCall(stage) {
-    const stageLabel = stage === "first" ? "第一次点名" : "第二次点名";
+    const stageLabel = stage === "first" ? "第一轮点名" : "第二轮点名";
     const inCorrectClassroom =
         gameState.currentLocation === gameState.todayClass.location && gameState.isInClass;
 
@@ -876,28 +1244,27 @@ function resolveRollCall(stage) {
         if (attendanceDuration < ROLL_CALL_GRACE_SECONDS) {
             if (stage === "first") {
                 gameState.score += 1;
+                gameState.narrowEscapeCount += 1;
+                showNotification(`${stageLabel}擦线过关。你只混了不到 10 分钟，得分 +1。`, "success");
             } else {
                 gameState.score -= 1;
-            }
-
-            if (stage === "first") {
-                showNotification(
-                    `${stageLabel}擦线过关。你在教室里只混了不到 10 分钟，得分 +1。`,
-                    "success"
-                );
-            } else {
-                showNotification(
-                    `${stageLabel}来了个回马枪。你本来都想溜了，结果还是被拖住，得分 -1。`,
-                    "warning"
-                );
+                gameState.secondRollCallHitCount += 1;
+                showNotification(`${stageLabel}来了个回马枪。你本来都想溜了，结果还是被拖住，得分 -1。`, "warning");
             }
         } else {
             gameState.score -= 1;
+            if (stage === "second") {
+                gameState.secondRollCallHitCount += 1;
+            }
             showNotification(`${stageLabel}撞上了，你这次属于真的坐满了，得分 -1。`, "warning");
         }
     } else {
         gameState.failCount += 1;
         gameState.score -= 1;
+        if (stage === "second") {
+            gameState.secondRollCallHitCount += 1;
+        }
+        closeBuildingOverlay(false);
         showNotification(`${stageLabel}没赶上，${gameState.todayClass.name} 逃课失败，得分 -1。`, "danger");
     }
 
@@ -916,9 +1283,154 @@ function checkGameStatus() {
     }
 }
 
+function resolveRollCall(stage) {
+    const stageLabel = stage === "first" ? "第一轮点名" : "第二轮点名";
+    const inCorrectClassroom =
+        gameState.currentLocation === gameState.todayClass.location && gameState.isInClass;
+
+    if (stage === "first") {
+        gameState.firstRollCallResolved = true;
+    } else {
+        gameState.secondRollCallResolved = true;
+    }
+
+    if (stage === "first") {
+        if (!inCorrectClassroom || gameState.classArrivalTime === null) {
+            failCurrentClass(`${stageLabel}没赶上，${gameState.todayClass.name} 逃课失败。`);
+            return;
+        }
+
+        if (gameState.shouldSecondRollCall) {
+            showNotification("老师翻完第一轮名单还没收起来，今天很可能还有第二下。", "warning");
+        } else {
+            showNotification("第一轮点名已经过去了，现在是继续留着还是立刻开溜。", "success");
+        }
+
+        openAttendanceOverlay();
+        updateUI();
+        return;
+    }
+
+    if (!inCorrectClassroom || gameState.classArrivalTime === null) {
+        gameState.secondRollCallHitCount += 1;
+        failCurrentClass(`${stageLabel}回头补刀，你不在教室里，当场翻车。`);
+        return;
+    }
+
+    if (gameState.committedToClass) {
+        showNotification(`${stageLabel}来了，你选择老实留着，安全过关，不加分也不扣分。`, "success");
+        updateUI();
+        return;
+    }
+
+    gameState.escapedAfterRollCall = false;
+    showNotification(`${stageLabel}来了，但你及时回到了教室，惊险过关，不加分也不扣分。`, "success");
+    updateUI();
+}
+
+function chooseStayAfterRollCall() {
+    gameState.committedToClass = true;
+    gameState.escapedAfterRollCall = false;
+    closeAttendanceOverlay(true);
+    showNotification("你决定继续留在教室里。这节课不加分，也不扣分，但得把后续风险熬过去。", "info");
+    updateUI();
+}
+
+function chooseRunAfterRollCall() {
+    const attendanceDuration = gameState.classArrivalTime === null
+        ? ROLL_CALL_GRACE_SECONDS
+        : gameState.dayTime - gameState.classArrivalTime;
+
+    gameState.committedToClass = false;
+    gameState.escapedAfterRollCall = true;
+    gameState.isInClass = false;
+    closeAttendanceOverlay(true);
+
+    if (gameState.shouldSecondRollCall) {
+        showNotification("你趁老师转身先溜了，但名单还没收起来。二次点名随时可能补刀。", "warning");
+    } else if (attendanceDuration < ROLL_CALL_GRACE_SECONDS) {
+        gameState.score += ESCAPE_SUCCESS_SCORE;
+        gameState.narrowEscapeCount += 1;
+        gameState.escapedAfterRollCall = false;
+        showNotification(`你在第一次点名后成功开溜，擦线逃课成立，得分 +${ESCAPE_SUCCESS_SCORE}。`, "success");
+    } else {
+        gameState.escapedAfterRollCall = false;
+        showNotification("你虽然点名后跑了，但已经坐够了，这波不加分，也不扣分。", "info");
+    }
+
+    updateUI();
+}
+
+function settleClassAtDayEnd() {
+    if (!gameState.todayClass || gameState.honestClassSettled) {
+        return;
+    }
+
+    if (gameState.committedToClass && gameState.isInClass) {
+        gameState.honestClassSettled = true;
+        gameState.isInClass = false;
+        showNotification("你把这节课老老实实坐完了。不加分，也不扣分，主打一个平安落地。", "info");
+        updateUI();
+        return;
+    }
+
+    if (gameState.escapedAfterRollCall) {
+        const attendanceDuration = gameState.classArrivalTime === null
+            ? ROLL_CALL_GRACE_SECONDS
+            : gameState.dayTime - gameState.classArrivalTime;
+        gameState.honestClassSettled = true;
+        gameState.escapedAfterRollCall = false;
+        if (attendanceDuration < ROLL_CALL_GRACE_SECONDS) {
+            gameState.score += ESCAPE_SUCCESS_SCORE;
+            gameState.narrowEscapeCount += 1;
+            showNotification(`今天没有等来二次点名，你点名后成功开溜，得分 +${ESCAPE_SUCCESS_SCORE}。`, "success");
+        } else {
+            showNotification("你点名后才走，但已经坐够了，今天不加分，也不扣分。", "info");
+        }
+        updateUI();
+    }
+}
+
+function failCurrentClass(message) {
+    gameState.failCount += 1;
+    gameState.score -= 1;
+    gameState.isInClass = false;
+    gameState.committedToClass = false;
+    gameState.escapedAfterRollCall = false;
+    closeAttendanceOverlay(false);
+    closeBuildingOverlay(false);
+    showNotification(`${message} 得分 -1。`, "danger");
+    checkGameStatus();
+    updateUI();
+}
+
 function getEndingMessage(score) {
+    if (gameState.failCount >= 3 && gameState.secondRollCallHitCount >= 2) {
+        return "二次点名反杀结局。你不是死在第一轮名单上，而是死在老师那句“后排同学等等”上。";
+    }
+
+    if (score >= 8 && gameState.failCount === 0 && gameState.secondRollCallHitCount === 0) {
+        return "神隐结局。你把图书馆和食堂两条线跑成了传说，老师只听说过你，没真正抓到过你。";
+    }
+
+    if (gameState.narrowEscapeCount >= 5) {
+        return "擦线艺术家结局。你每次都像踩着名单边缘过桥，心脏和路线一样硬。";
+    }
+
+    if (gameState.warningSaveCount >= 4) {
+        return "宿舍联动作战结局。你和室友像打双排一样配合，群消息就是第二生命。";
+    }
+
+    if (gameState.wrongFloorCount >= 8) {
+        return "楼梯战神结局。名单没把你练废，教学楼的楼梯先把你练成了有氧圣体。";
+    }
+
+    if (gameState.perfectFloorGuessCount >= 5) {
+        return "认路怪物结局。你进楼几乎不带犹豫，像提前偷看了教务系统。";
+    }
+
     if (score >= 6) {
-        return "你已经不是普通学生了，你是校园影分身。图书馆、路口、教学楼三点一线被你玩成了战术地图。";
+        return "你已经不是普通学生了，你是校园影分身。图书馆、食堂、教学楼两条线被你玩成了战术地图。";
     }
 
     if (score >= 2) {
@@ -945,6 +1457,9 @@ function endGame(completedTenDays) {
     elements.pauseBtn.disabled = true;
     elements.goClassBtn.disabled = true;
 
+    closeBuildingOverlay(false);
+    closeNoticeOverlay(false);
+    closeAttendanceOverlay(false);
     elements.finalScore.textContent = gameState.score;
     elements.finalTime.textContent = `第 ${gameState.dayCount} 天`;
 
@@ -964,24 +1479,102 @@ function showNotification(message, type = "info") {
     clearTimeout(notificationTimeout);
     elements.notification.textContent = message;
     elements.notification.className = `notification show ${type}`;
+    playFeedbackSound(type);
+    flashMapFeedback(type);
     notificationTimeout = setTimeout(() => {
         elements.notification.classList.remove("show");
     }, 3600);
 }
 
+function isTeachingBuilding(locationId) {
+    return locationId === "building3" || locationId === "building7";
+}
+
+function formatFloor(floor) {
+    return floor ? `${floor}F` : "未知楼层";
+}
+
+function createFloorRumor() {
+    const accuracyChance = clamp(
+        0.45 +
+            gameState.roommateProfile.warningChance * 0.25 +
+            (gameState.teacherMood.id === "strict" ? 0.05 : 0) +
+            gameState.eventEffects.roommateWarningDelta * 0.5,
+        0.35,
+        0.9
+    );
+    const accurate = Math.random() < accuracyChance;
+    const hintedFloor = accurate
+        ? gameState.todayClassFloor
+        : sample(FLOOR_OPTIONS.filter((floor) => floor !== gameState.todayClassFloor));
+
+    const rumorSources = {
+        sleeping: `宿舍上铺半梦半醒地说“我记得像是 ${formatFloor(hintedFloor)}”，语气不是很能让人放心。`,
+        online: `班群里连发了三条“好像在 ${formatFloor(hintedFloor)}”，看起来像边刷短视频边打字。`,
+        reliable: `室友言之凿凿地说“今天八成在 ${formatFloor(hintedFloor)}”，可信度相对像个人话。`
+    };
+
+    return {
+        accurate,
+        hintedFloor,
+        text: rumorSources[gameState.roommateProfile.id] ?? `有人说在 ${formatFloor(hintedFloor)}。`
+    };
+}
+
+function getTodayRumorText() {
+    if (!gameState.todayFloorRumor) {
+        return "班群还没统一口径。";
+    }
+
+    return `班群风声：${gameState.todayFloorRumor.text}`;
+}
+
+function getBuildingFlavor(buildingId, floor) {
+    if (!isTeachingBuilding(buildingId)) {
+        return "这里不像是你该久留的地方。";
+    }
+
+    const vibe = floorVibes[buildingId]?.[floor];
+    if (gameState.floorSearchAttempts >= 2 && buildingId === gameState.todayClass.location) {
+        return `${vibe} 你已经把这栋楼跑成了迷宫，热心路人终于肯救你一命。`;
+    }
+
+    return vibe ?? "楼道安静得像在等你犯错。";
+}
+
 elements.startBtn.addEventListener("click", startGame);
 elements.pauseBtn.addEventListener("click", pauseGame);
 elements.resetBtn.addEventListener("click", resetGame);
+elements.noticeBtn.addEventListener("click", () => {
+    gameState.hasSeenNotice = true;
+    openNoticeOverlay();
+});
+elements.soundBtn.addEventListener("click", () => {
+    gameState.soundEnabled = !gameState.soundEnabled;
+    elements.soundBtn.textContent = gameState.soundEnabled ? "音效：开" : "音效：关";
+    if (gameState.soundEnabled) {
+        ensureAudioReady();
+        playFeedbackSound("info");
+    }
+});
 elements.goClassBtn.addEventListener("click", goToClass);
-
 elements.dormitoryBtn.addEventListener("click", () => moveToLocation("dormitory"));
-elements.lakesideBtn.addEventListener("click", () => moveToLocation("lakeside"));
-elements.eastPathBtn.addEventListener("click", () => moveToLocation("eastPath"));
+elements.canteenBtn.addEventListener("click", () => moveToLocation("canteen"));
 elements.libraryGateBtn.addEventListener("click", () => moveToLocation("libraryGate"));
-elements.route7Btn.addEventListener("click", () => moveToLocation("route7"));
 elements.building7Btn.addEventListener("click", () => moveToLocation("building7"));
 elements.building3Btn.addEventListener("click", () => moveToLocation("building3"));
-
+elements.floorButtons.forEach((button) => {
+    button.addEventListener("click", () => chooseFloor(Number(button.dataset.floor)));
+});
+elements.leaveBuildingBtn.addEventListener("click", () => {
+    closeBuildingOverlay();
+    showNotification("你先缩回楼道观察局势，准备再赌一次。", "info");
+});
+elements.noticeCloseBtn.addEventListener("click", () => {
+    closeNoticeOverlay(true);
+});
+elements.attendanceRunBtn.addEventListener("click", chooseRunAfterRollCall);
+elements.attendanceStayBtn.addEventListener("click", chooseStayAfterRollCall);
 elements.restartBtn.addEventListener("click", initGame);
 
 document.addEventListener("DOMContentLoaded", initGame);
