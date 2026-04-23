@@ -36,6 +36,12 @@
             </div>
 
             <div class="map-stage pixel-frame">
+                <div class="map-title-screen" id="mapTitleScreen" aria-hidden="false">
+                    <div class="map-title-backdrop"></div>
+                    <div class="map-title-content">
+                        <button id="startBtn" class="pixel-button icon-button accent title-start-button" type="button">开始游戏</button>
+                    </div>
+                </div>
                 <div class="map-overlay">
                     <button class="location-marker dormitory" id="dormitoryBtn" type="button">
                         <span class="marker-name marker-full">寝室</span>
@@ -86,7 +92,6 @@
                 <div class="pixel-card action-panel">
                     <button id="goClassBtn" class="pixel-button icon-button accent" type="button" disabled>立刻赶去上课</button>
                     <div class="action-row">
-                        <button id="startBtn" class="pixel-button icon-button" type="button">开始</button>
                         <button id="pauseBtn" class="pixel-button icon-button" type="button" disabled>暂停</button>
                         <button id="resetBtn" class="pixel-button icon-button ghost" type="button">重开</button>
                     </div>

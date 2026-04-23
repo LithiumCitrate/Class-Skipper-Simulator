@@ -145,6 +145,53 @@ button {
     position: relative;
 }
 
+.map-title-screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1400;
+}
+
+.map-title-screen.hidden {
+    display: none;
+}
+
+.map-title-backdrop {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(20, 16, 10, 0.18), rgba(20, 16, 10, 0.38)),
+        url("assets/ui/title-screen.png");
+    background-position: center;
+    background-size: cover, 100% 100%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+}
+
+.map-title-content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    padding: 0 24px 5.5%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.title-start-button {
+    min-width: min(320px, 42%);
+    min-height: 68px;
+    font-size: 22px;
+    transform: none;
+}
+
+.title-start-button::before {
+    content: none;
+}
+
 .map-stage.feedback-success {
     animation: map-feedback-success 0.45s ease;
 }
@@ -427,7 +474,7 @@ button {
 
 .action-row {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
 
@@ -971,6 +1018,16 @@ button {
 
     .map-stage {
         aspect-ratio: 3704 / 1600;
+    }
+
+    .map-title-content {
+        padding: 0 12px 7%;
+    }
+
+    .title-start-button {
+        min-width: min(240px, 72%);
+        min-height: 56px;
+        font-size: 18px;
     }
 
     .location-marker {

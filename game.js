@@ -288,6 +288,7 @@ const gameState = {
 };
 
 const elements = {
+    mapTitleScreen: document.getElementById("mapTitleScreen"),
     dayCount: document.getElementById("dayCount"),
     currentLocation: document.getElementById("currentLocation"),
     score: document.getElementById("score"),
@@ -345,6 +346,17 @@ let notificationTimeout = null;
 let feedbackTimeout = null;
 let audioContext = null;
 let bgmAudio = null;
+let bgmRetryListenersBound = false;
+
+function showMapTitleScreen() {
+    elements.mapTitleScreen.classList.remove("hidden");
+    elements.mapTitleScreen.setAttribute("aria-hidden", "false");
+}
+
+function hideMapTitleScreen() {
+    elements.mapTitleScreen.classList.add("hidden");
+    elements.mapTitleScreen.setAttribute("aria-hidden", "true");
+}
 
 function initGame() {
     clearInterval(gameInterval);
@@ -416,7 +428,8 @@ function initGame() {
     closeBuildingOverlay(false);
     closeNoticeOverlay(false);
     closeAttendanceOverlay(false);
-    stopBgm();
+    showMapTitleScreen();
+    syncBgmPlayback();
     updateSoundControls();
     elements.player.classList.remove("moving");
     elements.player.style.setProperty("--player-facing", "1");
@@ -425,6 +438,7 @@ function initGame() {
 }
 
 function startGame() {
+    hideMapTitleScreen();
     ensureAudioReady();
     ensureBgmReady();
     if (gameState.isRunning && !gameState.isPaused) {
@@ -458,6 +472,7 @@ function startGame() {
         checkGameStatus();
         updateUI();
     }, TICK_MS);
+
 }
 
 function pauseGame() {
@@ -744,20 +759,37 @@ function ensureBgmReady() {
     bgmAudio.volume = 0.42;
 }
 
+function bindDeferredBgmStart() {
+    if (bgmRetryListenersBound) {
+        return;
+    }
+
+    bgmRetryListenersBound = true;
+    const resume = () => {
+        bgmRetryListenersBound = false;
+        syncBgmPlayback();
+    };
+
+    window.addEventListener("pointerdown", resume, { once: true });
+    window.addEventListener("keydown", resume, { once: true });
+}
+
 function syncBgmPlayback() {
     ensureBgmReady();
     if (!bgmAudio) {
         return;
     }
 
-    if (!gameState.bgmEnabled || !gameState.isRunning || gameState.isPaused) {
+    if (!gameState.bgmEnabled) {
         bgmAudio.pause();
         return;
     }
 
     const playPromise = bgmAudio.play();
     if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {});
+        playPromise.catch(() => {
+            bindDeferredBgmStart();
+        });
     }
 }
 
@@ -1623,7 +1655,6 @@ function endGame(completedTenDays) {
     closeBuildingOverlay(false);
     closeNoticeOverlay(false);
     closeAttendanceOverlay(false);
-    stopBgm();
     elements.finalScore.textContent = gameState.score;
     elements.finalTime.textContent = `第 ${gameState.dayCount} 天`;
 
