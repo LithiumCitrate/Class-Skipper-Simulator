@@ -738,7 +738,7 @@ function ensureBgmReady() {
         return;
     }
 
-    bgmAudio = new Audio("Tiptoeing.mp3");
+    bgmAudio = new Audio("assets/audio/Tiptoeing.mp3");
     bgmAudio.loop = true;
     bgmAudio.preload = "auto";
     bgmAudio.volume = 0.42;

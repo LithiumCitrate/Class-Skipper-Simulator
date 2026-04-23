@@ -138,7 +138,7 @@ button {
 .map-stage {
     width: 100%;
     aspect-ratio: 3704 / 1152;
-    background-image: url("map.png");
+    background-image: url("assets/maps/campus-map.png");
     background-size: cover;
     background-position: center;
     overflow: hidden;
@@ -194,7 +194,7 @@ button {
     top: 6.08%;
     width: 25.92%;
     height: 43.4%;
-    background-image: url("assets/mask-dormitory.png");
+    background-image: url("assets/masks/mask-dormitory.png");
 }
 
 .building7-mask {
@@ -202,7 +202,7 @@ button {
     top: 2.6%;
     width: 26.46%;
     height: 48.61%;
-    background-image: url("assets/mask-building7.png");
+    background-image: url("assets/masks/mask-building7.png");
 }
 
 .building3-mask {
@@ -210,7 +210,7 @@ button {
     top: 0;
     width: 22.52%;
     height: 40.8%;
-    background-image: url("assets/mask-building3.png");
+    background-image: url("assets/masks/mask-building3.png");
 }
 
 .player {
@@ -438,6 +438,73 @@ button {
     cursor: pointer;
     font-weight: 700;
     transition: transform 0.08s steps(2), box-shadow 0.08s steps(2), filter 0.2s ease;
+}
+
+.pixel-button.icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.pixel-button.icon-button::before {
+    content: "";
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    image-rendering: pixelated;
+}
+
+#goClassBtn::before {
+    background-image: url("assets/ui/icons/icon-go-class.png");
+}
+
+#startBtn::before {
+    background-image: url("assets/ui/icons/icon-start.png");
+}
+
+#pauseBtn::before {
+    background-image: url("assets/ui/icons/icon-pause.png");
+}
+
+#resetBtn::before {
+    background-image: url("assets/ui/icons/icon-reset.png");
+}
+
+#noticeBtn::before {
+    background-image: url("assets/ui/icons/icon-notice.png");
+}
+
+#soundBtn::before {
+    background-image: url("assets/ui/icons/icon-sound.png");
+}
+
+#bgmToggleBtn::before {
+    background-image: url("assets/ui/icons/icon-bgm.png");
+}
+
+#sfxToggleBtn::before {
+    background-image: url("assets/ui/icons/icon-sfx.png");
+}
+
+#leaveBuildingBtn::before {
+    background-image: url("assets/ui/icons/icon-leave.png");
+}
+
+#attendanceRunBtn::before {
+    background-image: url("assets/ui/icons/icon-run.png");
+}
+
+#attendanceStayBtn::before {
+    background-image: url("assets/ui/icons/icon-stay.png");
+}
+
+#restartBtn::before,
+#noticeCloseBtn::before {
+    background-image: url("assets/ui/icons/icon-restart.png");
 }
 
 .pixel-button:hover:not(:disabled),
@@ -702,7 +769,7 @@ button {
     min-height: 360px;
     background-image:
         linear-gradient(180deg, rgba(47, 36, 25, 0.14), rgba(47, 36, 25, 0.38)),
-        url("class buliding.png");
+        url("assets/scenes/class-building.png");
     background-size: cover;
     background-position: center;
     overflow: hidden;

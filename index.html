@@ -58,7 +58,7 @@
                         <span class="marker-name marker-short">3教</span>
                     </button>
                     <div class="player" id="player" aria-label="玩家位置">
-                        <img src="assets/player-pixel.png" alt="像素人物">
+                        <img src="assets/sprites/player-pixel.png" alt="像素人物">
                     </div>
                     <div class="building-occluder dormitory-mask" aria-hidden="true"></div>
                     <div class="building-occluder building7-mask" aria-hidden="true"></div>
@@ -84,23 +84,23 @@
                 </div>
 
                 <div class="pixel-card action-panel">
-                    <button id="goClassBtn" class="pixel-button accent" type="button" disabled>立刻赶去上课</button>
+                    <button id="goClassBtn" class="pixel-button icon-button accent" type="button" disabled>立刻赶去上课</button>
                     <div class="action-row">
-                        <button id="startBtn" class="pixel-button" type="button">开始</button>
-                        <button id="pauseBtn" class="pixel-button" type="button" disabled>暂停</button>
-                        <button id="resetBtn" class="pixel-button ghost" type="button">重开</button>
+                        <button id="startBtn" class="pixel-button icon-button" type="button">开始</button>
+                        <button id="pauseBtn" class="pixel-button icon-button" type="button" disabled>暂停</button>
+                        <button id="resetBtn" class="pixel-button icon-button ghost" type="button">重开</button>
                     </div>
-                    <button id="noticeBtn" class="pixel-button ghost" type="button">公告</button>
-                    <button id="soundBtn" class="pixel-button ghost" type="button">声音设置</button>
+                    <button id="noticeBtn" class="pixel-button icon-button ghost" type="button">公告</button>
+                    <button id="soundBtn" class="pixel-button icon-button ghost" type="button">声音设置</button>
                     <div class="sound-panel pixel-card" id="soundPanel" aria-hidden="true">
                         <p class="sound-panel-title">声音设置</p>
                         <div class="sound-option-row">
                             <span>背景音乐</span>
-                            <button id="bgmToggleBtn" class="pixel-button ghost sound-toggle" type="button">开</button>
+                            <button id="bgmToggleBtn" class="pixel-button icon-button ghost sound-toggle" type="button">开</button>
                         </div>
                         <div class="sound-option-row">
                             <span>音效</span>
-                            <button id="sfxToggleBtn" class="pixel-button ghost sound-toggle" type="button">开</button>
+                            <button id="sfxToggleBtn" class="pixel-button icon-button ghost sound-toggle" type="button">开</button>
                         </div>
                     </div>
                 </div>
@@ -130,7 +130,7 @@
                 <button class="pixel-button floor-button" data-floor="4" type="button">4F</button>
             </div>
             <div class="building-actions">
-                <button class="pixel-button ghost" id="leaveBuildingBtn" type="button">先回楼道蹲着</button>
+                <button class="pixel-button icon-button ghost" id="leaveBuildingBtn" type="button">先回楼道蹲着</button>
             </div>
         </div>
     </section>
@@ -160,7 +160,7 @@
                     <span class="notice-tag">宿舍群已传疯</span>
                 </div>
                 <div class="notice-actions">
-                    <button class="pixel-button accent" id="noticeCloseBtn" type="button">知道了，继续作战</button>
+                    <button class="pixel-button icon-button accent" id="noticeCloseBtn" type="button">知道了，继续作战</button>
                 </div>
             </div>
         </div>
@@ -172,8 +172,8 @@
             <h2 id="attendanceTitle">老师刚点完名</h2>
             <p class="attendance-copy" id="attendanceMessage">现在要决定是继续留着当老实人，还是趁老师转身直接开溜。</p>
             <div class="attendance-actions">
-                <button class="pixel-button ghost" id="attendanceRunBtn" type="button">直接跑掉</button>
-                <button class="pixel-button accent" id="attendanceStayBtn" type="button">继续留着</button>
+                <button class="pixel-button icon-button ghost" id="attendanceRunBtn" type="button">直接跑掉</button>
+                <button class="pixel-button icon-button accent" id="attendanceStayBtn" type="button">继续留着</button>
             </div>
         </div>
     </section>
@@ -193,7 +193,7 @@
                     <strong id="finalTime">第 0 天</strong>
                 </div>
             </div>
-            <button class="pixel-button accent" id="restartBtn" type="button">重新开始</button>
+            <button class="pixel-button icon-button accent" id="restartBtn" type="button">重新开始</button>
         </div>
     </section>
 
