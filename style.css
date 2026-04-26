@@ -509,6 +509,11 @@ button {
     background-image: url("assets/ui/icons/icon-go-class.png");
 }
 
+#classRunBtn::before,
+#runPromptConfirmBtn::before {
+    background-image: url("assets/ui/icons/icon-run.png");
+}
+
 #startBtn::before {
     background-image: url("assets/ui/icons/icon-start.png");
 }
@@ -543,6 +548,10 @@ button {
 
 #attendanceRunBtn::before {
     background-image: url("assets/ui/icons/icon-run.png");
+}
+
+#runPromptCancelBtn::before {
+    background-image: url("assets/ui/icons/icon-stay.png");
 }
 
 #attendanceStayBtn::before {
@@ -790,6 +799,8 @@ button {
 
 .building-card {
     width: min(1080px, 100%);
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -850,12 +861,17 @@ button {
 }
 
 .floor-grid {
+    position: relative;
+    z-index: 2;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
 }
 
 .floor-button {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
     min-height: 62px;
     font-size: 20px;
 }
@@ -869,6 +885,8 @@ button {
 }
 
 .building-actions {
+    position: relative;
+    z-index: 2;
     display: flex;
     justify-content: flex-end;
 }

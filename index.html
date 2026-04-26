@@ -91,6 +91,7 @@
 
                 <div class="pixel-card action-panel">
                     <button id="goClassBtn" class="pixel-button icon-button accent" type="button" disabled>立刻赶去上课</button>
+                    <button id="classRunBtn" class="pixel-button icon-button ghost" type="button" hidden>课中跑路</button>
                     <div class="action-row">
                         <button id="pauseBtn" class="pixel-button icon-button" type="button" disabled>暂停</button>
                         <button id="resetBtn" class="pixel-button icon-button ghost" type="button">重开</button>
@@ -179,6 +180,18 @@
             <div class="attendance-actions">
                 <button class="pixel-button icon-button ghost" id="attendanceRunBtn" type="button">直接跑掉</button>
                 <button class="pixel-button icon-button accent" id="attendanceStayBtn" type="button">继续留着</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="attendance-overlay" id="classRunOverlay" aria-hidden="true">
+        <div class="attendance-card pixel-card">
+            <span class="card-kicker">课中跑路提醒</span>
+            <h2 id="classRunTitle">现在要中途溜出去</h2>
+            <p class="attendance-copy" id="classRunMessage">如果后面还有点名，你不在教室里就会翻车。如果在二次点名前及时回来，还有机会补回来。</p>
+            <div class="attendance-actions">
+                <button class="pixel-button icon-button accent" id="runPromptConfirmBtn" type="button">就现在跑</button>
+                <button class="pixel-button icon-button ghost" id="runPromptCancelBtn" type="button">再看看</button>
             </div>
         </div>
     </section>

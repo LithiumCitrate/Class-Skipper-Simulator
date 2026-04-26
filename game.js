@@ -264,8 +264,13 @@ const gameState = {
     classArrivalTime: null,
     isInClass: false,
     pendingAttendanceDecision: false,
+    runPromptOpen: false,
+    runPromptResumeAfterClose: false,
     escapedAfterRollCall: false,
     committedToClass: false,
+    canRunInClass: false,
+    leftClassEarly: false,
+    pendingReturnWindow: false,
     honestClassSettled: false,
     shouldFirstRollCall: false,
     firstRollCallResolved: false,
@@ -302,6 +307,7 @@ const elements = {
     bgmToggleBtn: document.getElementById("bgmToggleBtn"),
     sfxToggleBtn: document.getElementById("sfxToggleBtn"),
     goClassBtn: document.getElementById("goClassBtn"),
+    classRunBtn: document.getElementById("classRunBtn"),
     dormitoryBtn: document.getElementById("dormitoryBtn"),
     canteenBtn: document.getElementById("canteenBtn"),
     libraryGateBtn: document.getElementById("libraryGateBtn"),
@@ -324,6 +330,7 @@ const elements = {
     buildingSubtitle: document.getElementById("buildingSubtitle"),
     buildingHint: document.getElementById("buildingHint"),
     buildingFlavor: document.getElementById("buildingFlavor"),
+    floorGrid: document.getElementById("floorGrid"),
     floorButtons: Array.from(document.querySelectorAll(".floor-button")),
     leaveBuildingBtn: document.getElementById("leaveBuildingBtn"),
     noticeOverlay: document.getElementById("noticeOverlay"),
@@ -333,6 +340,11 @@ const elements = {
     attendanceMessage: document.getElementById("attendanceMessage"),
     attendanceRunBtn: document.getElementById("attendanceRunBtn"),
     attendanceStayBtn: document.getElementById("attendanceStayBtn"),
+    classRunOverlay: document.getElementById("classRunOverlay"),
+    classRunTitle: document.getElementById("classRunTitle"),
+    classRunMessage: document.getElementById("classRunMessage"),
+    runPromptConfirmBtn: document.getElementById("runPromptConfirmBtn"),
+    runPromptCancelBtn: document.getElementById("runPromptCancelBtn"),
     gameOverScreen: document.getElementById("gameOverScreen"),
     gameOverTitle: document.getElementById("gameOverTitle"),
     gameOverMessage: document.getElementById("gameOverMessage"),
@@ -394,8 +406,13 @@ function initGame() {
         classArrivalTime: null,
         isInClass: false,
         pendingAttendanceDecision: false,
+        runPromptOpen: false,
+        runPromptResumeAfterClose: false,
         escapedAfterRollCall: false,
         committedToClass: false,
+        canRunInClass: false,
+        leftClassEarly: false,
+        pendingReturnWindow: false,
         honestClassSettled: false,
         shouldFirstRollCall: false,
         firstRollCallResolved: false,
@@ -428,6 +445,7 @@ function initGame() {
     closeBuildingOverlay(false);
     closeNoticeOverlay(false);
     closeAttendanceOverlay(false);
+    closeRunPrompt(false);
     showMapTitleScreen();
     syncBgmPlayback();
     updateSoundControls();
@@ -480,7 +498,7 @@ function pauseGame() {
         return;
     }
 
-    if (gameState.isNoticeOpen || gameState.pendingAttendanceDecision) {
+    if (gameState.isNoticeOpen || gameState.pendingAttendanceDecision || gameState.runPromptOpen) {
         return;
     }
 
@@ -546,8 +564,13 @@ function startNewDay() {
     gameState.classArrivalTime = null;
     gameState.isInClass = false;
     gameState.pendingAttendanceDecision = false;
+    gameState.runPromptOpen = false;
+    gameState.runPromptResumeAfterClose = false;
     gameState.escapedAfterRollCall = false;
     gameState.committedToClass = false;
+    gameState.canRunInClass = false;
+    gameState.leftClassEarly = false;
+    gameState.pendingReturnWindow = false;
     gameState.honestClassSettled = false;
     gameState.shouldFirstRollCall = false;
     gameState.firstRollCallResolved = false;
@@ -563,6 +586,7 @@ function startNewDay() {
     elements.player.classList.remove("moving");
     closeBuildingOverlay(false);
     closeAttendanceOverlay(false);
+    closeRunPrompt(false);
 
     elements.headlineCopy.textContent = sample(dayHeadlines);
     showNotification(
@@ -583,6 +607,7 @@ function nextDay() {
 }
 
 function updateUI() {
+    gameState.canRunInClass = canPlayerRunFromClass();
     elements.dayCount.textContent = gameState.dayCount;
     elements.currentLocation.textContent = gameState.isInsideBuilding
         ? `${locations[gameState.currentLocation]?.name ?? "楼内"}`
@@ -613,6 +638,8 @@ function updateUI() {
         elements.goClassBtn.disabled = true;
     }
 
+    elements.classRunBtn.hidden = !gameState.canRunInClass;
+    elements.classRunBtn.disabled = !gameState.canRunInClass;
     updatePlayerPosition();
     updateMarkers();
     renderBuildingOverlay();
@@ -645,7 +672,7 @@ function getCourseStatusText() {
         return `你已经冲进 ${locations[gameState.currentBuildingScene].name}，正在楼道里赌今天教室藏在哪层。跑错一层会额外浪费 ${FLOOR_SEARCH_PENALTY_SECONDS} 秒。`;
     }
 
-    if (gameState.pendingAttendanceDecision) {
+    if (gameState.pendingAttendanceDecision || gameState.runPromptOpen) {
         return "老师刚点完名，你得立刻决定是继续留着还是直接跑掉。";
     }
 
@@ -1089,7 +1116,7 @@ function moveToLocation(targetLocation, options = {}) {
     }
 
     if (gameState.currentLocation === targetLocation) {
-        if (options.enterClass && targetLocation === gameState.todayClass?.location) {
+        if (isTeachingBuilding(targetLocation)) {
             openBuildingOverlay(targetLocation);
             return;
         }
@@ -1167,7 +1194,7 @@ function finishMovement() {
     gameState.moveTotalTime = 0;
     elements.player.classList.remove("moving");
 
-    if (gameState.moveEnterClassOnArrival && targetLocation === gameState.todayClass?.location) {
+    if (targetLocation && isTeachingBuilding(targetLocation)) {
         gameState.moveEnterClassOnArrival = false;
         openBuildingOverlay(targetLocation);
         showNotification(`已冲到${locations[targetLocation].name}门口，快决定楼层。`, "success");
@@ -1267,6 +1294,116 @@ function closeAttendanceOverlay(withResume = true) {
     }
 }
 
+function canPlayerRunFromClass() {
+    return Boolean(
+        gameState.isRunning &&
+            !gameState.isPaused &&
+            gameState.isInClass &&
+            !gameState.pendingAttendanceDecision &&
+            !gameState.isNoticeOpen &&
+            !gameState.runPromptOpen
+    );
+}
+
+function hasPendingRollCallRisk() {
+    if (!gameState.firstRollCallResolved) {
+        return gameState.shouldFirstRollCall || gameState.shouldSecondRollCall;
+    }
+
+    return gameState.shouldSecondRollCall && !gameState.secondRollCallResolved;
+}
+
+function hasReturnedToClassInTime(stage) {
+    const inCorrectClassroom =
+        gameState.currentLocation === gameState.todayClass?.location && gameState.isInClass;
+
+    if (!inCorrectClassroom || !gameState.leftClassEarly) {
+        return false;
+    }
+
+    if (stage === "first") {
+        return !gameState.pendingReturnWindow;
+    }
+
+    return !gameState.pendingReturnWindow;
+}
+
+function getAttendanceDuration() {
+    return gameState.classArrivalTime === null
+        ? ROLL_CALL_GRACE_SECONDS
+        : gameState.dayTime - gameState.classArrivalTime;
+}
+
+function finalizeEarlyRunSuccess(message, type = "success") {
+    const attendanceDuration = getAttendanceDuration();
+    gameState.honestClassSettled = true;
+    gameState.leftClassEarly = false;
+    gameState.pendingReturnWindow = false;
+    gameState.escapedAfterRollCall = false;
+    gameState.committedToClass = false;
+    gameState.isInClass = false;
+
+    if (attendanceDuration < ROLL_CALL_GRACE_SECONDS) {
+        gameState.score += ESCAPE_SUCCESS_SCORE;
+        gameState.narrowEscapeCount += 1;
+        showNotification(message, type);
+    } else {
+        showNotification("你虽然中途溜了，但已经坐够了，这次不加分，也不扣分。", "info");
+    }
+}
+
+function openRunPrompt() {
+    if (!canPlayerRunFromClass()) {
+        return;
+    }
+
+    gameState.runPromptResumeAfterClose = pauseForOverlay();
+    gameState.runPromptOpen = true;
+    elements.classRunTitle.textContent = gameState.firstRollCallResolved
+        ? "现在要趁课中直接开溜"
+        : "现在要在第一轮点名前先溜";
+    elements.classRunMessage.textContent = hasPendingRollCallRisk()
+        ? "后面一旦还有点名，你不在教室里就会翻车；要是能赶在下一次点名前回到教室，还有补救空间。"
+        : "看起来后面已经没有点名风险了。现在跑路有机会直接把这节课收掉。";
+    elements.classRunOverlay.classList.add("show");
+    elements.classRunOverlay.setAttribute("aria-hidden", "false");
+    updateUI();
+}
+
+function closeRunPrompt(withResume = true) {
+    gameState.runPromptOpen = false;
+    gameState.runPromptResumeAfterClose = withResume && gameState.runPromptResumeAfterClose;
+    elements.classRunOverlay.classList.remove("show");
+    elements.classRunOverlay.setAttribute("aria-hidden", "true");
+
+    if (withResume && gameState.runPromptResumeAfterClose) {
+        gameState.runPromptResumeAfterClose = false;
+        startGame();
+    } else {
+        gameState.runPromptResumeAfterClose = false;
+    }
+}
+
+function runFromClass() {
+    const hasFutureRisk = hasPendingRollCallRisk();
+
+    gameState.runPromptOpen = false;
+    gameState.leftClassEarly = true;
+    gameState.pendingReturnWindow = hasFutureRisk;
+    gameState.escapedAfterRollCall = gameState.firstRollCallResolved;
+    gameState.committedToClass = false;
+    gameState.isInClass = false;
+    closeRunPrompt(true);
+
+    if (hasFutureRisk) {
+        showNotification("你从教室里先溜了。后面如果还有点名，记得在翻车前抢回去。", "warning");
+    } else {
+        finalizeEarlyRunSuccess(`你课中提前开溜成功，今天这节课到此为止，得分 +${ESCAPE_SUCCESS_SCORE}。`);
+    }
+
+    updateUI();
+}
+
 function closeBuildingOverlay(withUpdate = true) {
     gameState.isInsideBuilding = false;
     gameState.currentBuildingScene = null;
@@ -1348,15 +1485,26 @@ function enterClassroom() {
         return;
     }
 
+    const returningForRollCall = gameState.leftClassEarly && gameState.pendingReturnWindow;
     gameState.isInClass = true;
-    gameState.classArrivalTime = gameState.dayTime;
+    if (gameState.classArrivalTime === null) {
+        gameState.classArrivalTime = gameState.dayTime;
+    }
     gameState.pendingAttendanceDecision = false;
+    gameState.runPromptOpen = false;
+    gameState.runPromptResumeAfterClose = false;
+    gameState.pendingReturnWindow = false;
     gameState.escapedAfterRollCall = false;
     gameState.committedToClass = false;
     gameState.honestClassSettled = false;
     if (gameState.roommateWarned) {
         gameState.warningSaveCount += 1;
         gameState.roommateWarned = false;
+    }
+    if (returningForRollCall) {
+        showNotification(`你又摸回了 ${gameState.todayClass.name} 的 ${formatFloor(gameState.todayClassFloor)} 教室。接下来别再浪。`, "success");
+        updateUI();
+        return;
     }
     showNotification(
         `你已经进入 ${gameState.todayClass.name} 的 ${formatFloor(gameState.todayClassFloor)} 教室。先低头，装作刚到。`,
@@ -1655,6 +1803,7 @@ function endGame(completedTenDays) {
     closeBuildingOverlay(false);
     closeNoticeOverlay(false);
     closeAttendanceOverlay(false);
+    closeRunPrompt(false);
     elements.finalScore.textContent = gameState.score;
     elements.finalTime.textContent = `第 ${gameState.dayCount} 天`;
 
@@ -1737,6 +1886,124 @@ function getBuildingFlavor(buildingId, floor) {
     return vibe ?? "楼道安静得像在等你犯错。";
 }
 
+function resolveRollCall(stage) {
+    const stageLabel = stage === "first" ? "第一轮点名" : "第二轮点名";
+    const inCorrectClassroom =
+        gameState.currentLocation === gameState.todayClass.location && gameState.isInClass;
+
+    if (stage === "first") {
+        gameState.firstRollCallResolved = true;
+    } else {
+        gameState.secondRollCallResolved = true;
+    }
+
+    if (!inCorrectClassroom || gameState.classArrivalTime === null) {
+        if (stage === "second") {
+            gameState.secondRollCallHitCount += 1;
+        }
+        failCurrentClass(`${stageLabel}没赶上，${gameState.todayClass.name} 逃课失败。`);
+        return;
+    }
+
+    if (stage === "first") {
+        if (gameState.shouldSecondRollCall) {
+            showNotification("老师翻完第一轮名单还没收起来，今天很可能还有第二下。", "warning");
+        } else {
+            showNotification("第一轮点名已经过去了，现在是继续留着还是立刻开溜。", "success");
+        }
+
+        openAttendanceOverlay();
+        updateUI();
+        return;
+    }
+
+    if (gameState.committedToClass) {
+        gameState.leftClassEarly = false;
+        gameState.pendingReturnWindow = false;
+        gameState.escapedAfterRollCall = false;
+        showNotification(`${stageLabel}来了，你选择老实留着，安全过关，不加分也不扣分。`, "success");
+        updateUI();
+        return;
+    }
+
+    if (hasReturnedToClassInTime(stage)) {
+        gameState.leftClassEarly = false;
+        gameState.pendingReturnWindow = false;
+        gameState.escapedAfterRollCall = false;
+        showNotification(`${stageLabel}来了，但你及时回到了教室，惊险过关，不加分也不扣分。`, "success");
+        updateUI();
+        return;
+    }
+
+    gameState.secondRollCallHitCount += 1;
+    failCurrentClass(`${stageLabel}回头补刀，你不在教室里，当场翻车。`);
+}
+
+function chooseStayAfterRollCall() {
+    gameState.committedToClass = true;
+    gameState.leftClassEarly = false;
+    gameState.pendingReturnWindow = false;
+    gameState.escapedAfterRollCall = false;
+    closeAttendanceOverlay(true);
+    showNotification("你决定继续留在教室里。这节课不加分，也不扣分，但得把后续风险熬过去。", "info");
+    updateUI();
+}
+
+function chooseRunAfterRollCall() {
+    const hasFutureRisk = hasPendingRollCallRisk();
+    closeAttendanceOverlay(true);
+    gameState.leftClassEarly = true;
+    gameState.pendingReturnWindow = hasFutureRisk;
+    gameState.escapedAfterRollCall = gameState.firstRollCallResolved;
+    gameState.committedToClass = false;
+    gameState.isInClass = false;
+
+    if (hasFutureRisk) {
+        showNotification("你趁点名后的空档先溜了。后面要是真有回马枪，记得抢回教室。", "warning");
+    } else {
+        finalizeEarlyRunSuccess(`你在点名后成功开溜，今天这节课顺利收掉，得分 +${ESCAPE_SUCCESS_SCORE}。`);
+    }
+
+    updateUI();
+}
+
+function settleClassAtDayEnd() {
+    if (!gameState.todayClass || gameState.honestClassSettled) {
+        return;
+    }
+
+    if (gameState.committedToClass && gameState.isInClass) {
+        gameState.honestClassSettled = true;
+        gameState.isInClass = false;
+        gameState.leftClassEarly = false;
+        gameState.pendingReturnWindow = false;
+        showNotification("你把这节课老老实实坐完了。不加分，也不扣分，主打一个平安落地。", "info");
+        updateUI();
+        return;
+    }
+
+    if (gameState.leftClassEarly) {
+        finalizeEarlyRunSuccess(`今天没有等来新的点名，你课中提前开溜成功，得分 +${ESCAPE_SUCCESS_SCORE}。`);
+        updateUI();
+    }
+}
+
+function failCurrentClass(message) {
+    gameState.failCount += 1;
+    gameState.score -= 1;
+    gameState.isInClass = false;
+    gameState.committedToClass = false;
+    gameState.leftClassEarly = false;
+    gameState.pendingReturnWindow = false;
+    gameState.escapedAfterRollCall = false;
+    closeRunPrompt(false);
+    closeAttendanceOverlay(false);
+    closeBuildingOverlay(false);
+    showNotification(`${message} 得分 -1。`, "danger");
+    checkGameStatus();
+    updateUI();
+}
+
 elements.startBtn.addEventListener("click", startGame);
 elements.pauseBtn.addEventListener("click", pauseGame);
 elements.resetBtn.addEventListener("click", resetGame);
@@ -1748,6 +2015,7 @@ elements.soundBtn.addEventListener("click", toggleSoundPanel);
 elements.bgmToggleBtn.addEventListener("click", toggleBgm);
 elements.sfxToggleBtn.addEventListener("click", toggleSfx);
 elements.goClassBtn.addEventListener("click", goToClass);
+elements.classRunBtn.addEventListener("click", openRunPrompt);
 elements.dormitoryBtn.addEventListener("click", () => moveToLocation("dormitory"));
 elements.canteenBtn.addEventListener("click", () => moveToLocation("canteen"));
 elements.libraryGateBtn.addEventListener("click", () => moveToLocation("libraryGate"));
@@ -1755,6 +2023,14 @@ elements.building7Btn.addEventListener("click", () => moveToLocation("building7"
 elements.building3Btn.addEventListener("click", () => moveToLocation("building3"));
 elements.floorButtons.forEach((button) => {
     button.addEventListener("click", () => chooseFloor(Number(button.dataset.floor)));
+});
+elements.floorGrid.addEventListener("click", (event) => {
+    const floorButton = event.target.closest(".floor-button");
+    if (!floorButton) {
+        return;
+    }
+
+    chooseFloor(Number(floorButton.dataset.floor));
 });
 elements.leaveBuildingBtn.addEventListener("click", () => {
     closeBuildingOverlay();
@@ -1765,6 +2041,11 @@ elements.noticeCloseBtn.addEventListener("click", () => {
 });
 elements.attendanceRunBtn.addEventListener("click", chooseRunAfterRollCall);
 elements.attendanceStayBtn.addEventListener("click", chooseStayAfterRollCall);
+elements.runPromptConfirmBtn.addEventListener("click", runFromClass);
+elements.runPromptCancelBtn.addEventListener("click", () => {
+    closeRunPrompt(true);
+    updateUI();
+});
 elements.restartBtn.addEventListener("click", initGame);
 
 document.addEventListener("DOMContentLoaded", initGame);
